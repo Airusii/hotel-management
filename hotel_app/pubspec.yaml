@@ -1,0 +1,39 @@
+name: hotel_app
+description: "A new Flutter project."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Firebase
+  firebase_core: ^3.10.1
+  cloud_firestore: ^5.6.0
+  firebase_auth: ^5.5.0
+  firebase_messaging: ^15.2.0
+
+  # Навигация и Стейт-менеджмент
+  go_router: ^14.7.3
+  flutter_riverpod: ^2.6.1
+
+  # Тема и Локализация
+  easy_localization: ^3.0.7
+  shared_preferences: ^2.5.2
+
+  cupertino_icons: ^1.0.8
+  http: ^1.2.2
+  fl_chart: ^1.2.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/translations/
