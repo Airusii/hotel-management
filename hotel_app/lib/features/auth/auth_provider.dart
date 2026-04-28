@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotel_app/features/auth/auth_repository.dart';
+import 'package:hotel_app/core/services/notification_service.dart';
 
 final authRepositoryProvider = Provider((ref) => AuthRepository());
 
@@ -46,6 +47,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (user == null) {
         state = AuthState.unauthenticated();
       } else {
+        // При входе или восстановлении сессии обновляем FCM токен
+        NotificationService().updateTokenInDatabase();
+        
         final role = await _repository.getUserRole(user.uid);
         state = AuthState.authenticated(role ?? UserRole.client);
       }
@@ -56,6 +60,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState.loading();
     try {
       final credential = await _repository.signIn(email, password);
+      
+      // После успешного входа принудительно обновляем токен
+      NotificationService().updateTokenInDatabase();
+
       final role = await _repository.getUserRole(credential.user!.uid);
       state = AuthState.authenticated(role ?? UserRole.client);
     } catch (e) {

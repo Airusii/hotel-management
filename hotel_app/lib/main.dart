@@ -9,17 +9,33 @@ import 'package:hotel_app/firebase_options.dart';
 import 'package:hotel_app/core/services/notification_service.dart';
 
 void main() async {
+  // 1. Инициализация движка Flutter
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  // 2. Безопасный запуск Firebase
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    print('🚨 Ошибка Firebase: $e');
+  }
 
-  // 🚀 ЗАПУСКАЕМ СЕРВИС УВЕДОМЛЕНИЙ СРАЗУ ПОСЛЕ FIREBASE
-  await NotificationService().init();
+  // 3. Безопасный запуск уведомлений
+  try {
+    await NotificationService().init();
+  } catch (e) {
+    print('🚨 Ошибка Уведомлений (FCM): $e');
+  }
 
-  await EasyLocalization.ensureInitialized();
+  // 4. Безопасный запуск локализации
+  try {
+    await EasyLocalization.ensureInitialized();
+  } catch (e) {
+    print('🚨 Ошибка EasyLocalization: $e');
+  }
 
+  // Запуск самого приложения
   runApp(
     ProviderScope(
       child: EasyLocalization(
@@ -32,7 +48,6 @@ void main() async {
   );
 }
 
-// ... остальной код (MyApp) остается без изменений
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
