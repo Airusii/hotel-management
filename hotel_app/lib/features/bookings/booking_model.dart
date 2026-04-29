@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum BookingStatus { pending, confirmed, checkedIn, checkedOut, cancelled, completed }
+enum BookingStatus { pending, confirmed, checkedIn, completed, cancelled }
 
 class Booking {
   final String id;
@@ -12,6 +12,7 @@ class Booking {
   final DateTime checkOut;
   final BookingStatus status;
   final double totalPrice;
+  final DateTime? createdAt; // 🚀 Новое поле для сортировки заявок
 
   Booking({
     required this.id,
@@ -23,11 +24,11 @@ class Booking {
     required this.checkOut,
     required this.status,
     required this.totalPrice,
+    this.createdAt,
   });
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'roomId': roomId,
       'userId': userId,
       'guestName': guestName,
@@ -36,6 +37,7 @@ class Booking {
       'checkOut': Timestamp.fromDate(checkOut),
       'status': status.name,
       'totalPrice': totalPrice,
+      'createdAt': createdAt != null ? Timestamp.fromDate(createdAt!) : FieldValue.serverTimestamp(),
     };
   }
 
@@ -49,10 +51,11 @@ class Booking {
       checkIn: (map['checkIn'] as Timestamp).toDate(),
       checkOut: (map['checkOut'] as Timestamp).toDate(),
       status: BookingStatus.values.firstWhere(
-        (e) => e.name == map['status'],
+            (e) => e.name == map['status'],
         orElse: () => BookingStatus.pending,
       ),
       totalPrice: (map['totalPrice'] ?? 0.0).toDouble(),
+      createdAt: map['createdAt'] != null ? (map['createdAt'] as Timestamp).toDate() : null,
     );
   }
 
@@ -66,6 +69,7 @@ class Booking {
     DateTime? checkOut,
     BookingStatus? status,
     double? totalPrice,
+    DateTime? createdAt,
   }) {
     return Booking(
       id: id ?? this.id,
@@ -77,6 +81,7 @@ class Booking {
       checkOut: checkOut ?? this.checkOut,
       status: status ?? this.status,
       totalPrice: totalPrice ?? this.totalPrice,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

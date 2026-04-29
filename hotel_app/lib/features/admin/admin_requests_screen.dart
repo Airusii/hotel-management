@@ -11,7 +11,8 @@ class AdminRequestsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bookingsAsync = ref.watch(bookingsStreamProvider);
+    // 🚀 Использование специализированного провайдера для новых заявок
+    final pendingBookingsAsync = ref.watch(pendingBookingsProvider);
     final roomsAsync = ref.watch(roomsStreamProvider);
     final theme = Theme.of(context);
     final dateFormat = DateFormat('dd.MM.yyyy');
@@ -21,15 +22,28 @@ class AdminRequestsScreen extends ConsumerWidget {
         title: const Text('Новые заявки'),
         centerTitle: true,
       ),
-      body: bookingsAsync.when(
+      body: pendingBookingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Ошибка загрузки: $err')),
-        data: (bookings) {
-          // Фильтруем только ожидающие заявки
-          final pendingRequests = bookings
-              .where((b) => b.status == BookingStatus.pending)
-              .toList();
-
+        error: (err, _) => Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Ошибка: $err'),
+              const SizedBox(height: 8),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 32),
+                child: Text(
+                  '💡 Если в логах ошибка Query, создайте составной индекс в Firebase Console для коллекции bookings: status (Ascending) + createdAt (Descending)',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
+        ),
+        data: (pendingRequests) {
           if (pendingRequests.isEmpty) {
             return Center(
               child: Column(
@@ -57,7 +71,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                   final booking = pendingRequests[index];
                   final room = rooms.firstWhere(
                     (r) => r.id == booking.roomId,
-                    orElse: () => rooms.first, // Фоллбэк
+                    orElse: () => rooms.first,
                   );
 
                   return Card(
@@ -117,10 +131,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                                   await BookingService().confirmBooking(booking.id);
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Бронь подтверждена'),
-                                        backgroundColor: Colors.green,
-                                      ),
+                                      const SnackBar(content: Text('Бронь подтверждена'), backgroundColor: Colors.green),
                                     );
                                   }
                                 } catch (e) {

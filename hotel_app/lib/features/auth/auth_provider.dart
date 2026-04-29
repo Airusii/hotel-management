@@ -47,9 +47,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (user == null) {
         state = AuthState.unauthenticated();
       } else {
-        // При входе или восстановлении сессии обновляем FCM токен
         NotificationService().updateTokenInDatabase();
-        
         final role = await _repository.getUserRole(user.uid);
         state = AuthState.authenticated(role ?? UserRole.client);
       }
@@ -60,10 +58,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = AuthState.loading();
     try {
       final credential = await _repository.signIn(email, password);
-      
-      // После успешного входа принудительно обновляем токен
       NotificationService().updateTokenInDatabase();
-
       final role = await _repository.getUserRole(credential.user!.uid);
       state = AuthState.authenticated(role ?? UserRole.client);
     } catch (e) {
@@ -72,6 +67,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> signOut() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // 🚀 ОЧИСТКА ТОКЕНА ПЕРЕД ВЫХОДОМ
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+        'fcmToken': FieldValue.delete(),
+      });
+    }
     await _repository.signOut();
     state = AuthState.unauthenticated();
   }

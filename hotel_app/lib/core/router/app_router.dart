@@ -12,6 +12,7 @@ import 'package:hotel_app/core/widgets/main_scaffold.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/home/screens/room_details_screen.dart';
 import '../../features/profile/profile_screen.dart';
+import '../../features/profile/profile_settings_screen.dart';
 import 'package:hotel_app/features/tasks/screens/admin_tasks_screen.dart';
 import 'package:hotel_app/features/profile/my_bookings_screen.dart';
 import 'package:hotel_app/features/profile/my_reviews_screen.dart';
@@ -44,10 +45,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isTasksPath = path.startsWith('/tasks');
       final isProfilePath = path.startsWith('/profile');
       final isServicesPath = path.startsWith('/services');
-      final isFaqPath = path.startsWith('/faq');
 
       if (!isAuthenticated) {
-        if (isAdminPath || isTasksPath || isProfilePath || isServicesPath || isFaqPath) {
+        if (isAdminPath || isTasksPath || isProfilePath || isServicesPath) {
           return '/login';
         }
         return null;
@@ -101,16 +101,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Ветка 2: FAQ
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/faq',
-                builder: (context, state) => const GuestFaqScreen(),
-              ),
-            ],
-          ),
-          // Ветка 3: Профиль / Логин
+          // Ветка 2: Кабинет (Профиль + FAQ)
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -119,6 +110,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                 routes: [
                   GoRoute(path: 'my_bookings', builder: (context, state) => const MyBookingsScreen()),
                   GoRoute(path: 'my_reviews', builder: (context, state) => const MyReviewsScreen()),
+                  GoRoute(path: 'settings', builder: (context, state) => const ProfileSettingsScreen()),
+                  GoRoute(path: 'faq', builder: (context, state) => const GuestFaqScreen()),
                 ],
               ),
               GoRoute(
@@ -127,7 +120,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Ветка 4: Задачи
+          // Ветка 3: Задачи
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -142,7 +135,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
-          // Ветка 5: Админка
+          // Ветка 4: Админка
           StatefulShellBranch(
             routes: [
               ShellRoute(

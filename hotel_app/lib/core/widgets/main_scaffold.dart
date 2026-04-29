@@ -25,26 +25,25 @@ class MainScaffold extends ConsumerWidget {
     final userRoleAsync = ref.watch(userRoleProvider);
     final isWide = MediaQuery.of(context).size.width >= 600;
 
-    // Список всех возможных вкладок
+    // Список всех возможных вкладок (Обновлен: FAQ перенесен внутрь Кабинета)
     final List<({IconData icon, String label, int branchIndex})> allItems = [
       (icon: Icons.home, label: 'Главная', branchIndex: 0),
       (icon: Icons.room_service_outlined, label: 'Услуги', branchIndex: 1),
-      (icon: Icons.help_outline, label: 'FAQ', branchIndex: 2), // FAQ для гостя
-      (icon: Icons.person, label: isAuthenticated ? 'Моё' : 'Войти', branchIndex: 3),
-      (icon: Icons.task, label: 'Задачи', branchIndex: 4),
-      (icon: Icons.settings, label: 'Админка', branchIndex: 5),
+      (icon: Icons.person, label: isAuthenticated ? 'Кабинет' : 'Войти', branchIndex: 2),
+      (icon: Icons.task, label: 'Задачи', branchIndex: 3),
+      (icon: Icons.settings, label: 'Админка', branchIndex: 4),
     ];
 
     // Логика фильтрации вкладок
     List<({IconData icon, String label, int branchIndex})> getVisibleItems(String? role) {
       return allItems.where((item) {
         if (!isAuthenticated) {
-          // Для неавторизованных: Главная, Услуги, FAQ и Войти
-          return item.branchIndex <= 3;
+          // Для неавторизованных: Главная, Услуги и Войти
+          return item.branchIndex <= 2;
         }
         // Для авторизованных:
-        if (item.branchIndex == 4) return role == 'admin' || role == 'employee';
-        if (item.branchIndex == 5) return role == 'admin';
+        if (item.branchIndex == 3) return role == 'admin' || role == 'employee';
+        if (item.branchIndex == 4) return role == 'admin';
         return true;
       }).toList();
     }

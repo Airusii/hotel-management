@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
+import 'dart:io' show Platform;
+import 'package:hotel_app/core/router/app_router.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -13,6 +15,9 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
+    if (kIsWeb) return;
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) return;
+
     NotificationSettings settings = await _fcm.requestPermission(
       alert: true,
       badge: true,
@@ -20,13 +25,9 @@ class NotificationService {
     );
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      if (kDebugMode) print('User granted permission');
-      
-      // Сразу после получения прав пытаемся обновить токен
       await updateTokenInDatabase();
     }
 
-    // Слушатель обновления токена системой
     _fcm.onTokenRefresh.listen((newToken) async {
       await _saveTokenToFirestore(newToken);
     });
@@ -63,16 +64,23 @@ class NotificationService {
       }
     });
 
+    // 🚀 ПЕРЕХОД ПО КЛИКУ НА УВЕДОМЛЕНИЕ
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      if (kDebugMode) print('A new onMessageOpenedApp event was published!');
+      _handleMessageNavigation(message);
     });
   }
 
-  /// Получает текущий токен и сохраняет его в БД, если пользователь авторизован
+  void _handleMessageNavigation(RemoteMessage message) {
+    final type = message.data['type'];
+    if (type == 'booking_request') {
+      // Используем роутер приложения для перехода
+      routerProvider.read(_instance as dynamic).go('/admin/requests');
+    }
+  }
+
   Future<void> updateTokenInDatabase() async {
     String? token = await _fcm.getToken();
     if (token != null) {
-      if (kDebugMode) print('FCM Token: $token');
       await _saveTokenToFirestore(token);
     }
   }
@@ -84,7 +92,6 @@ class NotificationService {
         await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
           'fcmToken': token,
         });
-        if (kDebugMode) print('FCM Token updated in Firestore for user ${user.uid}');
       } catch (e) {
         if (kDebugMode) print('Error updating FCM Token: $e');
       }

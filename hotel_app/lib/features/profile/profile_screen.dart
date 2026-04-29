@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hotel_app/features/auth/auth_provider.dart';
 import 'package:hotel_app/core/widgets/notification_bottom_sheet.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class UserProfileScreen extends ConsumerStatefulWidget {
   const UserProfileScreen({super.key});
@@ -123,19 +124,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Text(
+                  const Text(
                     'Войти в аккаунт',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Войдите, чтобы управлять бронированиями и просматривать историю',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 36),
@@ -147,7 +138,6 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                       border: OutlineInputBorder(),
                     ),
                     keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
                     enabled: !isLoading,
                   ),
                   const SizedBox(height: 16),
@@ -158,39 +148,19 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_outlined
-                              : Icons.visibility_off_outlined,
-                        ),
-                        onPressed: () =>
-                            setState(() => _obscurePassword = !_obscurePassword),
+                        icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
                     ),
                     obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => isLoading ? null : _login(),
                     enabled: !isLoading,
                   ),
                   const SizedBox(height: 28),
                   FilledButton(
                     onPressed: isLoading ? null : _login,
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(52),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
                     child: isLoading
-                        ? const SizedBox(
-                            height: 22,
-                            width: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2.5),
-                          )
-                        : const Text(
-                            'Войти',
-                            style: TextStyle(fontSize: 16),
-                          ),
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('Войти'),
                   ),
                 ],
               ),
@@ -201,10 +171,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
     );
   }
 
-  // ── НАСТРОЙКИ ПРОФИЛЯ ──────────────────────────────────────────
+  // ── НАСТРОЙКИ ПРОФИЛЯ (КАБИНЕТ) ────────────────────────────────
   Widget _buildProfileSettings(BuildContext context, AuthState authState) {
     final theme = Theme.of(context);
     final roleAsyncValue = ref.watch(userRoleProvider);
+    final user = FirebaseAuth.instance.currentUser;
 
     final roleName = roleAsyncValue.when(
       data: (roleStr) => _roleLabelFromString(roleStr),
@@ -212,11 +183,8 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       error: (_, __) => 'Ошибка роли',
     );
 
-    // Для демонстрации Badge (потом можно связать с реальным стейтом)
-    const bool hasNewNotifications = true;
-
     return Scaffold(
-      appBar: AppBar(title: const Text('Профиль')),
+      appBar: AppBar(title: const Text('Кабинет')),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
         children: [
@@ -224,28 +192,29 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
             child: Column(
               children: [
                 CircleAvatar(
-                  radius: 40,
-                  backgroundColor: theme.colorScheme.primaryContainer,
-                  child: Icon(
-                    Icons.person,
-                    size: 44,
-                    color: theme.colorScheme.primary,
-                  ),
+                  radius: 50,
+                  backgroundColor: theme.colorScheme.surfaceVariant,
+                  backgroundImage: user?.photoURL != null ? NetworkImage(user!.photoURL!) : null,
+                  child: user?.photoURL == null ? Icon(Icons.person, size: 50, color: theme.colorScheme.primary) : null,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
+                Text(
+                  user?.displayName ?? 'Пользователь',
+                  style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
                 Chip(
                   label: Text(roleName),
-                  avatar: const Icon(Icons.verified_user_outlined, size: 16),
                   backgroundColor: theme.colorScheme.secondaryContainer,
                 ),
               ],
             ),
           ),
           const SizedBox(height: 32),
-          const _SectionHeader(label: 'Мой кабинет'),
+          const _SectionHeader(label: 'Мои действия'),
           _ProfileTile(
             icon: Icons.calendar_month_outlined,
-            title: 'Мои бронирования',
+            title: 'Бронирования',
             onTap: () => context.go('/profile/my_bookings'),
           ),
           _ProfileTile(
@@ -253,35 +222,34 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
             title: 'Мои отзывы',
             onTap: () => context.go('/profile/my_reviews'),
           ),
+          _ProfileTile(
+            icon: Icons.help_outline,
+            title: 'Помощь и FAQ',
+            onTap: () => context.go('/profile/faq'),
+          ),
           const SizedBox(height: 16),
           const _SectionHeader(label: 'Настройки'),
           _ProfileTile(
-            icon: hasNewNotifications ? Icons.notifications_active_outlined : Icons.notifications_outlined,
-            title: 'Уведомления',
-            badge: hasNewNotifications, // Передаем состояние Badge
-            onTap: () => _showNotificationsSheet(context),
+            icon: Icons.settings_outlined,
+            title: 'Настройки профиля',
+            onTap: () => context.go('/profile/settings'),
           ),
           _ProfileTile(
-            icon: Icons.language_outlined,
-            title: 'Язык',
-            onTap: () {},
+            icon: Icons.notifications_outlined,
+            title: 'Уведомления',
+            badge: true,
+            onTap: () => _showNotificationsSheet(context),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: OutlinedButton.icon(
               onPressed: _signOut,
               icon: Icon(Icons.logout, color: theme.colorScheme.error),
-              label: Text(
-                'Выйти из аккаунта',
-                style: TextStyle(color: theme.colorScheme.error),
-              ),
+              label: Text('Выйти из аккаунта', style: TextStyle(color: theme.colorScheme.error)),
               style: OutlinedButton.styleFrom(
-                minimumSize: const Size.fromHeight(52),
+                minimumSize: const Size.fromHeight(56),
                 side: BorderSide(color: theme.colorScheme.error.withOpacity(0.5)),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
               ),
             ),
           ),
@@ -292,17 +260,12 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
 
   String _roleLabelFromString(String? role) {
     switch (role) {
-      case 'admin':
-        return 'Администратор';
-      case 'employee':
-        return 'Сотрудник';
-      default:
-        return 'Клиент';
+      case 'admin': return 'Администратор';
+      case 'employee': return 'Сотрудник';
+      default: return 'Клиент';
     }
   }
 }
-
-// ── Вспомогательные виджеты ────────────────────────────────────
 
 class _SectionHeader extends StatelessWidget {
   final String label;
@@ -311,11 +274,12 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 4, top: 4),
+      padding: const EdgeInsets.only(left: 8, bottom: 8, top: 16),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
             ),
       ),
     );
@@ -342,21 +306,16 @@ class _ProfileTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(vertical: 4),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant,
-        ),
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
       child: ListTile(
         leading: badge 
-          ? Badge(
-              child: Icon(icon, color: theme.colorScheme.primary),
-            )
+          ? Badge(child: Icon(icon, color: theme.colorScheme.primary))
           : Icon(icon),
         title: Text(title),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: const Icon(Icons.chevron_right, size: 20),
         onTap: onTap,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
