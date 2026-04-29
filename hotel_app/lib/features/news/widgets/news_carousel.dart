@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:hotel_app/features/news/news_model.dart'; // Твой путь к модели
+import 'package:hotel_app/features/news/news_model.dart';
+import 'package:hotel_app/features/news/widgets/news_details_dialog.dart';
 
 class NewsCarousel extends StatelessWidget {
   const NewsCarousel({super.key});
@@ -8,12 +9,12 @@ class NewsCarousel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      // 🚀 Делаем умный запрос: берем новости для Всех и для Гостей
       stream: FirebaseFirestore.instance
           .collection('news')
           .where('targetAudience', whereIn: ['all', 'guests'])
+          .where('isArchived', isEqualTo: false)
           .orderBy('createdAt', descending: true)
-          .limit(5) // Берем только 5 самых свежих, чтобы не грузить телефон
+          .limit(5)
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
@@ -25,7 +26,7 @@ class NewsCarousel extends StatelessWidget {
 
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) {
-          return const SizedBox.shrink(); // Если новостей нет, просто скрываем карусель (пустота)
+          return const SizedBox.shrink();
         }
 
         return Column(
@@ -40,7 +41,7 @@ class NewsCarousel extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             SizedBox(
-              height: 150, // Фиксированная высота карусели
+              height: 110, 
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -59,41 +60,77 @@ class NewsCarousel extends StatelessWidget {
     );
   }
 
-  // Дизайн самой карточки
   Widget _buildNewsCard(BuildContext context, NewsModel news) {
+    final theme = Theme.of(context);
+    
+    // Ищем первую картинку в блоках для иконки
+    String? imageUrl;
+    String firstText = '';
+    
+    for (var block in news.contentBlocks) {
+      if (block.type == 'image' && imageUrl == null) {
+        imageUrl = block.value;
+      }
+      if (block.type == 'text' && firstText.isEmpty) {
+        firstText = block.value;
+      }
+    }
+
     return Container(
-      width: 280, // Ширина одной карточки
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      width: 300,
+      margin: const EdgeInsets.symmetric(horizontal: 6),
       child: Card(
         elevation: 0,
-        color: Theme.of(context).colorScheme.surfaceContainerHighest, // Берем цвет из твоей темы
+        color: theme.colorScheme.surfaceContainerHighest,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // Позже сюда добавим открытие новости на весь экран
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Открываем: ${news.title}')),
+            showDialog(
+              context: context,
+              builder: (context) => NewsDetailsDialog(news: news),
             );
           },
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
               children: [
-                Text(
-                  news.title,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                // Левая часть - Картинка
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    width: 80,
+                    height: 80,
+                    color: theme.colorScheme.surfaceVariant,
+                    child: imageUrl != null
+                        ? Image.network(imageUrl, fit: BoxFit.cover)
+                        : Icon(Icons.newspaper, color: theme.colorScheme.primary.withOpacity(0.5)),
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(width: 12),
+                // Правая часть - Текст
                 Expanded(
-                  child: Text(
-                    news.content,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        news.title,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        firstText,
+                        style: TextStyle(
+                          fontSize: 12, 
+                          color: theme.colorScheme.onSurfaceVariant
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ],

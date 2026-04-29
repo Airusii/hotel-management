@@ -2,76 +2,34 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotel_app/features/news/news_model.dart';
+import 'package:hotel_app/features/news/widgets/news_details_dialog.dart';
 import 'package:intl/intl.dart';
 
 class AdminNewsScreen extends ConsumerStatefulWidget {
-  const AdminNewsScreen({super.key});
+  final int initialTab;
+  const AdminNewsScreen({super.key, this.initialTab = 0});
 
   @override
   ConsumerState<AdminNewsScreen> createState() => _AdminNewsScreenState();
 }
 
-// Добавили SingleTickerProviderStateMixin для управления вкладками
 class _AdminNewsScreenState extends ConsumerState<AdminNewsScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _titleController = TextEditingController();
-  final _contentController = TextEditingController();
   TargetAudience _selectedAudience = TargetAudience.all;
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 3, vsync: this, initialIndex: widget.initialTab);
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     _titleController.dispose();
-    _contentController.dispose();
     super.dispose();
-  }
-
-  Future<void> _publishNews() async {
-    if (_titleController.text.isEmpty || _contentController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заполните все поля!')),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      await FirebaseFirestore.instance.collection('news').add({
-        'title': _titleController.text.trim(),
-        'content': _contentController.text.trim(),
-        'targetAudience': _selectedAudience.name,
-        'createdAt': FieldValue.serverTimestamp(),
-        'isArchived': false,
-      });
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Новость успешно опубликована! 🎉')),
-      );
-
-      _titleController.clear();
-      _contentController.clear();
-
-      // Теперь переключение работает через контроллер
-      _tabController.animateTo(0);
-
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   Future<void> _toggleArchive(NewsModel news, bool archive) async {
@@ -81,17 +39,38 @@ class _AdminNewsScreenState extends ConsumerState<AdminNewsScreen> with SingleTi
         .update({'isArchived': archive});
   }
 
+  Future<void> _deleteNews(String id) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Удаление'),
+        content: const Text('Вы уверены, что хотите удалить новость навсегда?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: const Text('Удалить', style: TextStyle(color: Colors.red))
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await FirebaseFirestore.instance.collection('news').doc(id).delete();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Центр управления новостями'),
+        title: const Text('Управление новостями'),
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Активные'),
-            Tab(text: 'Создать'),
-            Tab(text: 'Архив'),
+            Tab(icon: Icon(Icons.campaign_outlined), text: 'Активные'),
+            Tab(icon: Icon(Icons.add_comment_outlined), text: 'Создать'),
+            Tab(icon: Icon(Icons.archive_outlined), text: 'Архив'),
           ],
         ),
       ),
@@ -99,7 +78,7 @@ class _AdminNewsScreenState extends ConsumerState<AdminNewsScreen> with SingleTi
         controller: _tabController,
         children: [
           _buildNewsList(false),
-          _buildCreateTab(),
+          const Center(child: Text('Используйте кнопку "Создать" в меню или FAB')), // Заглушка, т.к. создание в отдельном экране
           _buildNewsList(true),
         ],
       ),
@@ -124,7 +103,16 @@ class _AdminNewsScreenState extends ConsumerState<AdminNewsScreen> with SingleTi
             .toList();
 
         if (newsList.isEmpty) {
-          return Center(child: Text(archived ? 'Архив пуст' : 'Нет активных новостей'));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(archived ? Icons.archive_outlined : Icons.newspaper, size: 64, color: Colors.grey[300]),
+                const SizedBox(height: 16),
+                Text(archived ? 'Архив пуст' : 'Активных новостей нет', style: const TextStyle(color: Colors.grey)),
+              ],
+            ),
+          );
         }
 
         return ListView.builder(
@@ -132,83 +120,63 @@ class _AdminNewsScreenState extends ConsumerState<AdminNewsScreen> with SingleTi
           itemCount: newsList.length,
           itemBuilder: (context, index) {
             final news = newsList[index];
+            String? imageUrl;
+            String firstText = '';
+            for (var b in news.contentBlocks) {
+              if (b.type == 'image' && imageUrl == null) imageUrl = b.value;
+              if (b.type == 'text' && firstText.isEmpty) firstText = b.value;
+            }
+
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                title: Text(news.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text(news.content, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${DateFormat('dd.MM.yyyy').format(news.createdAt)} • ${news.targetAudience.name.toUpperCase()}',
-                      style: const TextStyle(fontSize: 10),
-                    ),
-                  ],
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () => showDialog(
+                  context: context,
+                  builder: (context) => NewsDetailsDialog(news: news),
                 ),
-                trailing: IconButton(
-                  icon: Icon(archived ? Icons.unarchive : Icons.archive_outlined),
-                  onPressed: () => _toggleArchive(news, !archived),
-                  tooltip: archived ? 'Восстановить' : 'В архив',
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 60, height: 60,
+                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          child: imageUrl != null 
+                            ? Image.network(imageUrl, fit: BoxFit.cover)
+                            : const Icon(Icons.image_outlined, color: Colors.grey),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(news.title, style: const TextStyle(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
+                            Text(firstText, style: const TextStyle(fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(archived ? Icons.unarchive : Icons.archive_outlined),
+                        onPressed: () => _toggleArchive(news, !archived),
+                      ),
+                      if (archived)
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => _deleteNews(news.id),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             );
           },
         );
       },
-    );
-  }
-
-  Widget _buildCreateTab() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _titleController,
-            decoration: const InputDecoration(
-              labelText: 'Заголовок',
-              border: OutlineInputBorder(),
-            ),
-            maxLength: 60,
-          ),
-          const SizedBox(height: 16),
-          const Text('Кто увидит новость:', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          SegmentedButton<TargetAudience>(
-            segments: const [
-              ButtonSegment(value: TargetAudience.all, label: Text('Всем')),
-              ButtonSegment(value: TargetAudience.guests, label: Text('Гостям')),
-              ButtonSegment(value: TargetAudience.staff, label: Text('Персоналу')),
-            ],
-            selected: {_selectedAudience},
-            onSelectionChanged: (Set<TargetAudience> newSelection) {
-              setState(() => _selectedAudience = newSelection.first);
-            },
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _contentController,
-            decoration: const InputDecoration(
-              labelText: 'Текст новости',
-              border: OutlineInputBorder(),
-              alignLabelWithHint: true,
-            ),
-            maxLines: 8,
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _isLoading ? null : _publishNews,
-            style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
-            child: _isLoading
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Опубликовать', style: TextStyle(fontSize: 16)),
-          ),
-        ],
-      ),
     );
   }
 }

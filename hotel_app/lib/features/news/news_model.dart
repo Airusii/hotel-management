@@ -2,10 +2,22 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum TargetAudience { all, guests, staff }
 
+class NewsContentBlock {
+  final String type; // 'text' или 'image'
+  final String value; // текст или url картинки
+
+  NewsContentBlock({required this.type, required this.value});
+
+  Map<String, dynamic> toMap() => {'type': type, 'value': value};
+
+  factory NewsContentBlock.fromMap(Map<String, dynamic> map) => 
+      NewsContentBlock(type: map['type'] ?? 'text', value: map['value'] ?? '');
+}
+
 class NewsModel {
   final String id;
   final String title;
-  final String content;
+  final List<NewsContentBlock> contentBlocks;
   final TargetAudience targetAudience;
   final DateTime createdAt;
   final bool isArchived;
@@ -13,7 +25,7 @@ class NewsModel {
   NewsModel({
     required this.id,
     required this.title,
-    required this.content,
+    required this.contentBlocks,
     required this.targetAudience,
     required this.createdAt,
     this.isArchived = false,
@@ -22,7 +34,7 @@ class NewsModel {
   Map<String, dynamic> toMap() {
     return {
       'title': title,
-      'content': content,
+      'contentBlocks': contentBlocks.map((b) => b.toMap()).toList(),
       'targetAudience': targetAudience.name,
       'createdAt': Timestamp.fromDate(createdAt),
       'isArchived': isArchived,
@@ -33,31 +45,15 @@ class NewsModel {
     return NewsModel(
       id: id,
       title: map['title'] ?? 'Без заголовка',
-      content: map['content'] ?? '',
+      contentBlocks: (map['contentBlocks'] as List? ?? [])
+          .map((b) => NewsContentBlock.fromMap(b as Map<String, dynamic>))
+          .toList(),
       targetAudience: TargetAudience.values.firstWhere(
         (e) => e.name == map['targetAudience'],
         orElse: () => TargetAudience.all,
       ),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       isArchived: map['isArchived'] ?? false,
-    );
-  }
-
-  NewsModel copyWith({
-    String? id,
-    String? title,
-    String? content,
-    TargetAudience? targetAudience,
-    DateTime? createdAt,
-    bool? isArchived,
-  }) {
-    return NewsModel(
-      id: id ?? this.id,
-      title: title ?? this.title,
-      content: content ?? this.content,
-      targetAudience: targetAudience ?? this.targetAudience,
-      createdAt: createdAt ?? this.createdAt,
-      isArchived: isArchived ?? this.isArchived,
     );
   }
 }
