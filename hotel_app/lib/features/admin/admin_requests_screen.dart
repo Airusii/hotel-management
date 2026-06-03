@@ -11,7 +11,6 @@ class AdminRequestsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 🚀 Использование специализированного провайдера для новых заявок
     final pendingBookingsAsync = ref.watch(pendingBookingsProvider);
     final roomsAsync = ref.watch(roomsStreamProvider);
     final theme = Theme.of(context);
@@ -25,22 +24,27 @@ class AdminRequestsScreen extends ConsumerWidget {
       body: pendingBookingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.red),
-              const SizedBox(height: 16),
-              Text('Ошибка: $err'),
-              const SizedBox(height: 8),
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  '💡 Если в логах ошибка Query, создайте составной индекс в Firebase Console для коллекции bookings: status (Ascending) + createdAt (Descending)',
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('Ошибка загрузки заявок', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                const Text(
+                  'Возможно, нужно создать составной индекс в Firebase Console:\n'
+                  'Коллекция "bookings" → поля: status (По возрастанию) + createdAt (По убыванию)',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Text('Детали: $err',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
           ),
         ),
         data: (pendingRequests) {
@@ -49,11 +53,13 @@ class AdminRequestsScreen extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.inbox_outlined, size: 80, color: theme.colorScheme.outline.withOpacity(0.5)),
+                  Icon(Icons.inbox_outlined,
+                      size: 80, color: theme.colorScheme.outline.withOpacity(0.5)),
                   const SizedBox(height: 16),
                   Text(
-                    'Новых заявок пока нет',
-                    style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.outline),
+                    'Новых заявок нет',
+                    style: theme.textTheme.titleMedium
+                        ?.copyWith(color: theme.colorScheme.outline),
                   ),
                 ],
               ),
@@ -62,7 +68,7 @@ class AdminRequestsScreen extends ConsumerWidget {
 
           return roomsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(child: Text('Ошибка загрузки комнат')),
+            error: (err, _) => Center(child: Text('Ошибка загрузки номеров: $err')),
             data: (rooms) {
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -71,7 +77,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                   final booking = pendingRequests[index];
                   final room = rooms.firstWhere(
                     (r) => r.id == booking.roomId,
-                    orElse: () => rooms.first,
+                    orElse: () => rooms.isNotEmpty ? rooms.first : throw StateError('No rooms'),
                   );
 
                   return Card(
@@ -86,12 +92,17 @@ class AdminRequestsScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Заголовок: имя гостя + цена
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                booking.guestName,
-                                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                              Expanded(
+                                child: Text(
+                                  booking.guestName,
+                                  style: theme.textTheme.titleLarge
+                                      ?.copyWith(fontWeight: FontWeight.bold),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                               Text(
                                 '\$${booking.totalPrice.toStringAsFixed(0)}',
@@ -102,10 +113,15 @@ class AdminRequestsScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
+                          // Статус
+                          const SizedBox(height: 8),
+                          _StatusChip(status: booking.status),
                           const SizedBox(height: 12),
+                          // Даты
                           Row(
                             children: [
-                              Icon(Icons.calendar_today, size: 16, color: theme.colorScheme.outline),
+                              Icon(Icons.calendar_today,
+                                  size: 16, color: theme.colorScheme.outline),
                               const SizedBox(width: 8),
                               Text(
                                 '${dateFormat.format(booking.checkIn)} — ${dateFormat.format(booking.checkOut)}',
@@ -114,37 +130,58 @@ class AdminRequestsScreen extends ConsumerWidget {
                             ],
                           ),
                           const SizedBox(height: 8),
+                          // Номер
                           Row(
                             children: [
-                              Icon(Icons.door_front_door_outlined, size: 16, color: theme.colorScheme.outline),
+                              Icon(Icons.door_front_door_outlined,
+                                  size: 16, color: theme.colorScheme.outline),
                               const SizedBox(width: 8),
                               Text('Номер: ${room.name} (${room.typeId})'),
                             ],
                           ),
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            height: 48,
-                            child: FilledButton.icon(
-                              onPressed: () async {
-                                try {
-                                  await BookingService().confirmBooking(booking.id);
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Бронь подтверждена'), backgroundColor: Colors.green),
-                                    );
-                                  }
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
-                                    );
-                                  }
-                                }
-                              },
-                              icon: const Icon(Icons.check),
-                              label: const Text('ПОДТВЕРДИТЬ'),
+                          // Email если есть
+                          if (booking.guestEmail != null &&
+                              booking.guestEmail!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(Icons.email_outlined,
+                                    size: 16, color: theme.colorScheme.outline),
+                                const SizedBox(width: 8),
+                                Text(booking.guestEmail!,
+                                    style: theme.textTheme.bodySmall),
+                              ],
                             ),
+                          ],
+                          const SizedBox(height: 20),
+                          // Кнопки действий
+                          Row(
+                            children: [
+                              // ОТКЛОНИТЬ
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: () =>
+                                      _handleCancel(context, booking.id),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.red,
+                                    side: const BorderSide(color: Colors.red),
+                                  ),
+                                  icon: const Icon(Icons.close, size: 18),
+                                  label: const Text('Отклонить'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // ПОДТВЕРДИТЬ
+                              Expanded(
+                                flex: 2,
+                                child: FilledButton.icon(
+                                  onPressed: () =>
+                                      _handleConfirm(context, booking.id),
+                                  icon: const Icon(Icons.check, size: 18),
+                                  label: const Text('Подтвердить'),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -155,6 +192,88 @@ class AdminRequestsScreen extends ConsumerWidget {
             },
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _handleConfirm(BuildContext context, String bookingId) async {
+    try {
+      await BookingService().confirmBooking(bookingId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Заявка подтверждена'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleCancel(BuildContext context, String bookingId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Отклонить заявку?'),
+        content: const Text(
+            'Заявка будет отменена. Гость получит уведомление (если настроено).'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Назад')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Отклонить'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await BookingService().cancelBooking(bookingId);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Заявка отклонена'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final BookingStatus status;
+  const _StatusChip({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: status.color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: status.color.withOpacity(0.5)),
+      ),
+      child: Text(
+        status.label,
+        style: TextStyle(color: status.color, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }

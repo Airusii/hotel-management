@@ -18,11 +18,13 @@ class _ContentBlockEdit {
   final String type;
   TextEditingController? textController;
   XFile? imageFile;
+  Uint8List? previewBytes; // 🚀 Для безопасного отображения превью
 
   _ContentBlockEdit.text({String text = ''})
       : type = 'text',
         textController = TextEditingController(text: text);
-  _ContentBlockEdit.image(this.imageFile) : type = 'image';
+
+  _ContentBlockEdit.image(this.imageFile, this.previewBytes) : type = 'image';
 
   void dispose() {
     textController?.dispose();
@@ -53,12 +55,13 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
 
     if (image == null) return;
 
-    // 🚀 Изменено на безопасную проверку платформы (не крашит Web)
+    final Uint8List bytes = await image.readAsBytes();
+
+    // Ограничение для ПК (и веба/десктопа) в 250 кБ
     if (!kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.windows ||
             defaultTargetPlatform == TargetPlatform.macOS ||
             defaultTargetPlatform == TargetPlatform.linux)) {
-      final bytes = await image.readAsBytes();
       if (bytes.length > 250 * 1024) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -70,7 +73,8 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
     }
 
     setState(() {
-      _blocks.add(_ContentBlockEdit.image(image));
+      // Добавляем блок изображения с байтами для превью
+      _blocks.add(_ContentBlockEdit.image(image, bytes));
       _blocks.add(_ContentBlockEdit.text());
     });
   }
@@ -81,12 +85,16 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
         .child('news_images')
         .child('${DateTime.now().millisecondsSinceEpoch}_${image.name}');
 
-    if (kIsWeb) {
-      await ref.putData(await image.readAsBytes());
-    } else {
-      await ref.putFile(File(image.path));
-    }
-    return await ref.getDownloadURL();
+    final bytes = await image.readAsBytes();
+
+    // 1. Создаем задачу загрузки
+    final uploadTask = ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+
+    // 2. ЖЕСТКО дожидаемся окончания загрузки файла в хранилище
+    final snapshot = await uploadTask;
+
+    // 3. Берем ссылку именно у успешно загруженного объекта
+    return await snapshot.ref.getDownloadURL();
   }
 
   Future<void> _publishNews() async {
@@ -104,7 +112,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
 
       for (var block in _blocks) {
         if (block.type == 'text') {
-          final text = block.textController!.text.trim();
+          final text = block.textController?.text.trim() ?? '';
           if (text.isNotEmpty) {
             finalBlocks.add(NewsContentBlock(type: 'text', value: text));
           }
@@ -215,9 +223,9 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
                       children: [
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: kIsWeb
-                              ? Image.network(block.imageFile!.path, height: 200, width: double.infinity, fit: BoxFit.cover)
-                              : Image.file(File(block.imageFile!.path), height: 200, width: double.infinity, fit: BoxFit.cover),
+                          child: block.previewBytes != null
+                              ? Image.memory(block.previewBytes!, height: 200, width: double.infinity, fit: BoxFit.cover)
+                              : const SizedBox(height: 200, child: Center(child: Icon(Icons.image))),
                         ),
                         Positioned(
                           right: 8,

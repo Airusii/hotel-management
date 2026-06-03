@@ -1,6 +1,44 @@
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-enum BookingStatus { pending, confirmed, checkedIn, completed, cancelled }
+/// Жизненный цикл брони: pending → confirmed → checkedIn → checkedOut
+/// cancelled — отмена на любом этапе до заселения
+/// completed — устаревшее значение, сохранено для совместимости с базой
+enum BookingStatus { pending, confirmed, checkedIn, checkedOut, completed, cancelled }
+
+extension BookingStatusX on BookingStatus {
+  String get label {
+    switch (this) {
+      case BookingStatus.pending:
+        return 'Заявка';
+      case BookingStatus.confirmed:
+        return 'Подтверждено';
+      case BookingStatus.checkedIn:
+        return 'Заехал';
+      case BookingStatus.checkedOut:
+      case BookingStatus.completed:
+        return 'Выехал';
+      case BookingStatus.cancelled:
+        return 'Отменено';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case BookingStatus.pending:
+        return const Color(0xFFFF9800); // orange
+      case BookingStatus.confirmed:
+        return const Color(0xFF4CAF50); // green
+      case BookingStatus.checkedIn:
+        return const Color(0xFF2196F3); // blue
+      case BookingStatus.checkedOut:
+      case BookingStatus.completed:
+        return const Color(0xFF9E9E9E); // grey
+      case BookingStatus.cancelled:
+        return const Color(0xFFF44336); // red
+    }
+  }
+}
 
 class Booking {
   final String id;

@@ -13,10 +13,18 @@ class MyBookingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(authStateChangesProvider).value;
-    final bookingsAsync = ref.watch(bookingsStreamProvider);
     final roomsAsync = ref.watch(roomsStreamProvider);
     final theme = Theme.of(context);
     final dateFormat = DateFormat('dd.MM.yyyy');
+
+    if (currentUser == null) {
+      return const Scaffold(
+        body: Center(child: Text('Пожалуйста, войдите в систему')),
+      );
+    }
+
+    // Используем специализированный провайдер — только брони текущего пользователя
+    final bookingsAsync = ref.watch(userBookingsProvider(currentUser.uid));
 
     return Scaffold(
       appBar: AppBar(
@@ -207,46 +215,17 @@ class MyBookingsScreen extends ConsumerWidget {
   // 🚀 КОНЕЦ МЕТОДА
 
   Widget _buildStatusChip(BookingStatus status) {
-    Color color;
-    String label;
-
-    switch (status) {
-      case BookingStatus.pending:
-        color = Colors.orange;
-        label = 'Ожидает подтверждения';
-        break;
-      case BookingStatus.confirmed:
-        color = Colors.green;
-        label = 'Подтверждено';
-        break;
-      case BookingStatus.checkedIn:
-        color = Colors.blue;
-        label = 'Проживает';
-        break;
-      case BookingStatus.completed:
-        color = Colors.grey;
-        label = 'Завершено';
-        break;
-      case BookingStatus.cancelled:
-        color = Colors.red;
-        label = 'Отменено';
-        break;
-      default:
-        color = Colors.grey;
-        label = 'Неизвестно';
-    }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: status.color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: status.color.withOpacity(0.5)),
       ),
       child: Text(
-        label,
+        status.label,
         style: TextStyle(
-          color: color,
+          color: status.color,
           fontSize: 12,
           fontWeight: FontWeight.bold,
         ),

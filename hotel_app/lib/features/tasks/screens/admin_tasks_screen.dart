@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotel_app/features/tasks/task_model.dart';
@@ -128,16 +129,44 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
       ),
       body: tasksAsync.when(
         data: (tasks) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildColumn('Ожидают', tasks.where((t) => t.status == TaskStatus.pending).toList(), TaskStatus.pending),
-                _buildColumn('В работе', tasks.where((t) => t.status == TaskStatus.inProgress).toList(), TaskStatus.inProgress),
-                _buildColumn('Готово', tasks.where((t) => t.status == TaskStatus.completed).toList(), TaskStatus.completed),
-              ],
-            ),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              // Если экран достаточно широкий (ПК/Планшет), делаем колонки адаптивными
+              final bool isWide = constraints.maxWidth > 800;
+
+              final content = Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildColumn('Ожидают', tasks.where((t) => t.status == TaskStatus.pending).toList(), TaskStatus.pending, isWide),
+                  _buildColumn('В работе', tasks.where((t) => t.status == TaskStatus.inProgress).toList(), TaskStatus.inProgress, isWide),
+                  _buildColumn('Готово', tasks.where((t) => t.status == TaskStatus.completed).toList(), TaskStatus.completed, isWide),
+                ],
+              );
+
+              if (isWide) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
+                  child: content,
+                );
+              }
+
+              // Для мобильных разрешаем горизонтальный скролл
+              return ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(
+                  dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
+                ),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: 900,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      child: content,
+                    ),
+                  ),
+                ),
+              );
+            },
           );
         },
         loading: () => const Center(
@@ -150,18 +179,19 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
     );
   }
 
-  Widget _buildColumn(String title, List<Task> columnTasks, TaskStatus status) {
-    return DragTarget<Task>(
+  Widget _buildColumn(String title, List<Task> columnTasks, TaskStatus status, bool isWide) {
+    final theme = Theme.of(context);
+
+    Widget columnContent = DragTarget<Task>(
       onAccept: (task) {
         ref.read(tasksRepositoryProvider).updateTaskStatus(task.id, status);
       },
       builder: (context, candidateData, rejectedData) {
         final isHovered = candidateData.isNotEmpty;
         return Container(
-          width: 320,
-          margin: const EdgeInsets.all(8.0),
+          margin: const EdgeInsets.all(4.0),
           decoration: BoxDecoration(
-            color: isHovered ? Colors.grey[200] : Colors.transparent,
+            color: isHovered ? theme.colorScheme.primaryContainer.withOpacity(0.3) : theme.colorScheme.surfaceVariant.withOpacity(0.2),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -173,18 +203,18 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: Colors.grey[300],
+                        color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         '${columnTasks.length}',
-                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                       ),
                     ),
                   ],
@@ -204,6 +234,8 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
         );
       },
     );
+
+    return isWide ? Expanded(child: columnContent) : SizedBox(width: 300, child: columnContent);
   }
 }
 
@@ -225,32 +257,54 @@ class _TaskCard extends ConsumerWidget {
       });
     }
 
-    return LongPressDraggable<Task>(
-      data: task,
-      feedback: _buildFeedbackCard(theme),
-      childWhenDragging: Opacity(
-        opacity: 0.3,
-        child: _buildCardContent(context, roomName),
+    final cardContent = _buildCardContent(context, roomName);
+
+    // На ПК (Windows/Web/etc) используем обычный Draggable для мгновенного отклика мышкой.
+    // На мобильных - LongPressDraggable, чтобы не блокировать скролл списка.
+    final bool useLongPress = theme.platform == TargetPlatform.iOS || theme.platform == TargetPlatform.android;
+
+    if (useLongPress) {
+      return LongPressDraggable<Task>(
+        data: task,
+        feedback: _buildFeedbackCard(theme),
+        childWhenDragging: Opacity(opacity: 0.3, child: cardContent),
+        child: cardContent,
+      );
+    }
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.grab,
+      child: Draggable<Task>(
+        data: task,
+        feedback: _buildFeedbackCard(theme),
+        childWhenDragging: Opacity(opacity: 0.3, child: cardContent),
+        child: cardContent,
       ),
-      child: _buildCardContent(context, roomName),
     );
   }
 
   Widget _buildFeedbackCard(ThemeData theme) {
     return Material(
-      elevation: 8,
+      elevation: 12,
       borderRadius: BorderRadius.circular(12),
+      color: Colors.transparent,
       child: Container(
-        width: 300,
+        width: 280, // Фиксируем ширину превью
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.colorScheme.primary.withOpacity(0.5)),
+          border: Border.all(color: theme.colorScheme.primary),
         ),
-        child: Text(
-          task.title,
-          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              task.title,
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ],
         ),
       ),
     );
@@ -259,8 +313,8 @@ class _TaskCard extends ConsumerWidget {
   Widget _buildCardContent(BuildContext context, String? roomName) {
     final theme = Theme.of(context);
     return Card(
-      elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      elevation: 1,
+      margin: const EdgeInsets.symmetric(vertical: 4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12.0),
@@ -273,20 +327,21 @@ class _TaskCard extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     task.title,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
                 if (task.roomId != null)
                   Container(
                     margin: const EdgeInsets.only(left: 8),
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '№ ${roomName ?? task.roomId}',
-                      style: theme.textTheme.labelSmall?.copyWith(
+                      style: TextStyle(
+                        fontSize: 10,
                         color: theme.colorScheme.onPrimaryContainer,
                         fontWeight: FontWeight.bold,
                       ),
@@ -296,25 +351,23 @@ class _TaskCard extends ConsumerWidget {
             ),
             if (task.description.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 8.0),
+                padding: const EdgeInsets.only(top: 4.0),
                 child: Text(
                   task.description,
-                  maxLines: 3,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+                  style: theme.textTheme.bodySmall,
                 ),
               ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Icon(Icons.access_time, size: 12, color: theme.colorScheme.outline),
+                Icon(Icons.access_time, size: 10, color: theme.colorScheme.outline),
                 const SizedBox(width: 4),
                 Text(
                   '${task.createdAt.day}.${task.createdAt.month}',
-                  style: theme.textTheme.labelSmall?.copyWith(color: theme.colorScheme.outline),
+                  style: TextStyle(fontSize: 10, color: theme.colorScheme.outline),
                 ),
               ],
             ),

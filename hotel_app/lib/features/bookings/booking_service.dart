@@ -1,14 +1,15 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'booking_model.dart';
 
 class BookingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Подтверждение бронирования
+  /// pending → confirmed
   Future<void> confirmBooking(String bookingId) async {
     try {
       await _firestore.collection('bookings').doc(bookingId).update({
-        'status': 'confirmed',
+        'status': BookingStatus.confirmed.name,
       });
     } catch (e) {
       if (kDebugMode) print('Error confirming: $e');
@@ -16,11 +17,11 @@ class BookingService {
     }
   }
 
-  /// Заселение гостя (Check-in)
+  /// confirmed → checkedIn
   Future<void> checkInGuest(String bookingId) async {
     try {
       await _firestore.collection('bookings').doc(bookingId).update({
-        'status': 'checkedIn',
+        'status': BookingStatus.checkedIn.name,
       });
     } catch (e) {
       if (kDebugMode) print('Error check-in: $e');
@@ -28,23 +29,32 @@ class BookingService {
     }
   }
 
-  /// Выселение гостя (Check-out)
-  /// Также меняет статус номера на 'needs_cleaning'
+  /// checkedIn → checkedOut + номер на уборку
   Future<void> checkOutGuest(String bookingId, String roomId) async {
     final batch = _firestore.batch();
 
-    // 1. Обновляем статус брони
     final bookingRef = _firestore.collection('bookings').doc(bookingId);
-    batch.update(bookingRef, {'status': 'checkedOut'});
+    batch.update(bookingRef, {'status': BookingStatus.checkedOut.name});
 
-    // 2. Обновляем статус номера
     final roomRef = _firestore.collection('rooms').doc(roomId);
-    batch.update(roomRef, {'status': 'cleaning'}); // Используем существующий статус 'cleaning' из модели Room
+    batch.update(roomRef, {'status': 'cleaning'});
 
     try {
       await batch.commit();
     } catch (e) {
       if (kDebugMode) print('Error check-out: $e');
+      rethrow;
+    }
+  }
+
+  /// Отклонение заявки (pending → cancelled)
+  Future<void> cancelBooking(String bookingId) async {
+    try {
+      await _firestore.collection('bookings').doc(bookingId).update({
+        'status': BookingStatus.cancelled.name,
+      });
+    } catch (e) {
+      if (kDebugMode) print('Error cancelling: $e');
       rethrow;
     }
   }

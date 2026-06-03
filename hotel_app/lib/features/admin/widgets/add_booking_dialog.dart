@@ -59,7 +59,8 @@ class _AddBookingDialogState extends ConsumerState<AddBookingDialog> {
       setState(() => _isLoading = true);
 
       try {
-        // Создаем объект через новую модель
+        // Брони созданные вручную администратором сразу переходят в confirmed.
+        // Брони от клиентов (через приложение) создаются со статусом pending.
         final newBooking = Booking(
           id: '',
           roomId: _selectedRoomId!,

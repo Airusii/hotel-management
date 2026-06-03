@@ -28,14 +28,17 @@ class BookingsRepository {
             (snapshot) => snapshot.docs.map((doc) => Booking.fromMap(doc.data(), doc.id)).toList());
   }
 
-  // 🚀 НОВЫЙ: Получить заявки на рассмотрении
+  // Получить заявки в ожидании (pending)
+  // ВАЖНО: требует составного индекса в Firebase: status (Asc) + createdAt (Desc)
+  // Если индекс не создан, запрос вернёт ошибку с ссылкой на создание индекса в консоли.
   Stream<List<Booking>> getPendingBookings() {
     return _firestore
         .collection('bookings')
         .where('status', isEqualTo: BookingStatus.pending.name)
         .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => Booking.fromMap(doc.data(), doc.id)).toList());
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Booking.fromMap(doc.data(), doc.id)).toList());
   }
 
   // 🚀 НОВЫЙ: Получить брони конкретного пользователя
