@@ -26,6 +26,8 @@ import 'package:hotel_app/features/admin/screens/admin_news_active_screen.dart';
 import 'package:hotel_app/features/admin/screens/admin_news_archive_screen.dart';
 import 'package:hotel_app/features/admin/screens/admin_faq_screen.dart';
 import 'package:hotel_app/features/client/screens/guest_faq_screen.dart';
+import 'package:hotel_app/features/bookings/screens/bookings_history_screen.dart';
+import 'package:hotel_app/features/bookings/screens/admin_requests_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -149,17 +151,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                   GoRoute(path: '/admin/faq', builder: (context, state) => const AdminFaqScreen()),
                   GoRoute(
                     path: '/admin/requests',
-                    builder: (context, state) => Scaffold(
-                      appBar: AppBar(title: const Text('Новые заявки')),
-                      body: const Center(child: Text('Список заявок на подтверждение')),
-                    ),
+                    builder: (context, state) => const AdminRequestsScreen(),
                   ),
                   GoRoute(
                     path: '/admin/bookings_history',
-                    builder: (context, state) => Scaffold(
-                      appBar: AppBar(title: const Text('История бронирований')),
-                      body: const Center(child: Text('Архив всех броней')),
-                    ),
+                    builder: (context, state) => const BookingsHistoryScreen(),
                   ),
                   GoRoute(
                     path: '/admin/news/create',
