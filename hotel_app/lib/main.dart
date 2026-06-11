@@ -1,4 +1,3 @@
-import 'package:easy_localization/easy_localization.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +6,9 @@ import 'package:hotel_app/core/theme/app_theme.dart';
 import 'package:hotel_app/core/theme/theme_provider.dart';
 import 'package:hotel_app/firebase_options.dart';
 import 'package:hotel_app/core/services/notification_service.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:hotel_app/l10n/app_localizations.dart';
+import 'package:hotel_app/core/providers/locale_provider.dart';
 
 void main() async {
   // 1. Инициализация движка Flutter
@@ -18,36 +20,23 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
   } catch (e) {
-    print('🚨 Ошибка Firebase: $e');
+    debugPrint('🚨 Ошибка Firebase: $e');
   }
 
   // 3. Безопасный запуск уведомлений
   try {
     await NotificationService().init();
   } catch (e) {
-    print('🚨 Ошибка Уведомлений (FCM): $e');
-  }
-
-  // 4. Безопасный запуск локализации
-  try {
-    await EasyLocalization.ensureInitialized();
-  } catch (e) {
-    print('🚨 Ошибка EasyLocalization: $e');
+    debugPrint('🚨 Ошибка Уведомлений (FCM): $e');
   }
 
   // Запуск самого приложения
   runApp(
-    ProviderScope(
-      child: EasyLocalization(
-        supportedLocales: const [Locale('en'), Locale('ru')],
-        path: 'assets/translations',
-        fallbackLocale: const Locale('en'),
-        child: const MyApp(),
-      ),
+    const ProviderScope(
+      child: MyApp(),
     ),
   );
 }
-
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
@@ -56,12 +45,23 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
     final router = ref.watch(routerProvider);
+    final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
       title: 'Hotel Management System',
-      localizationsDelegates: context.localizationDelegates,
-      supportedLocales: context.supportedLocales,
-      locale: context.locale,
+      debugShowCheckedModeBanner: false,
+
+      // Настройка локализации
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: supportedLocales, // импортировано из locale_provider.dart
+
+      // Тема и навигация
       themeMode: themeMode,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,

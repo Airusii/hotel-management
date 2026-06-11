@@ -10,7 +10,7 @@ import 'package:hotel_app/features/reviews/review_model.dart';
 import 'package:hotel_app/features/reviews/reviews_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class RoomDetailsScreen extends ConsumerStatefulWidget {
   final String roomId;
   const RoomDetailsScreen({super.key, required this.roomId});
@@ -77,6 +77,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
   }
 
   Future<void> _selectDates(List<Booking> allBookings) async {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final picked = await showDateRangePicker(
       context: context,
@@ -97,7 +98,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
       if (hasConflict) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Выбранный период содержит уже занятые даты'), backgroundColor: Colors.red),
+            SnackBar(content: Text(l10n.roomDetailsDatesOccupied), backgroundColor: Colors.red),
           );
         }
       } else {
@@ -107,9 +108,10 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
   }
 
   Future<void> _bookRoom(Room room, List<Booking> allBookings) async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate() || _selectedDates == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Пожалуйста, выберите даты и заполните поля')),
+        SnackBar(content: Text(l10n.loginFillFields)),
       );
       return;
     }
@@ -124,7 +126,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
 
     if (hasConflict) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ошибка: даты уже заняты'), backgroundColor: Colors.red),
+        SnackBar(content: Text(l10n.roomDetailsDatesUnavailable), backgroundColor: Colors.red),
       );
       return;
     }
@@ -152,14 +154,14 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Заявка на бронирование отправлена! Ожидайте подтверждения.')),
+          SnackBar(content: Text(l10n.bookingActionConfirmed)),
         );
         context.pop();
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка при бронировании: $e')),
+          SnackBar(content: Text(l10n.errorGeneric(e.toString()))),
         );
       }
     } finally {
@@ -169,6 +171,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final roomsAsync = ref.watch(roomsStreamProvider);
     final bookingsAsync = ref.watch(bookingsStreamProvider);
     final reviewsAsync = ref.watch(roomReviewsStreamProvider(widget.roomId));
@@ -216,24 +219,24 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                           ),
                         ],
                       ),
-                      Text('за ночь', style: theme.textTheme.bodySmall),
+                      Text(l10n.roomDetailsPerNight, style: theme.textTheme.bodySmall),
                       const SizedBox(height: 24),
                       Text(
-                        'Описание',
+                        l10n.roomDetailsDescription,
                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Уютный номер со всеми удобствами для вашего комфортного проживания. Мы гарантируем высокое качество обслуживания и чистоту.',
+                        l10n.roomDetailsDescriptionText,
                         style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        'Удобства',
+                        l10n.roomDetailsAmenities,
                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
-                      const Wrap(
+                      Wrap(
                         spacing: 16,
                         runSpacing: 12,
                         children: [
@@ -258,7 +261,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Text(
-                                  'Забронировать номер',
+                                  'Номерди брондоо',
                                   style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 20),
@@ -268,8 +271,8 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                                     icon: const Icon(Icons.calendar_today),
                                     label: Text(
                                       _selectedDates == null
-                                          ? 'Выбрать даты проживания'
-                                          : '${_selectedDates!.start.day}.${_selectedDates!.start.month} - ${_selectedDates!.end.day}.${_selectedDates!.end.month}',
+                                          ? l10n.homeSearchDates
+                                          : '${DateFormat.MMMd(Localizations.localeOf(context).toString()).format(_selectedDates!.start)} - ${DateFormat.MMMd(Localizations.localeOf(context).toString()).format(_selectedDates!.end)}',
                                     ),
                                     style: OutlinedButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -280,17 +283,17 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                                     padding: EdgeInsets.symmetric(vertical: 16),
                                     child: CircularProgressIndicator(),
                                   )),
-                                  error: (_, __) => const Text('Ошибка загрузки календаря'),
+                                  error: (_, __) => Text(l10n.errorGeneric('Calendar')),
                                 ),
                                 const SizedBox(height: 16),
                                 TextFormField(
                                   controller: _nameController,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Ваше имя',
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-                                    prefixIcon: Icon(Icons.person_outline),
+                                  decoration: InputDecoration(
+                                    labelText: 'Сиздин атыныз',
+                                    border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+                                    prefixIcon: const Icon(Icons.person_outline),
                                   ),
-                                  validator: (v) => v!.isEmpty ? 'Введите имя' : null,
+                                  validator: (v) => v!.isEmpty ? l10n.loginFillFields : null,
                                 ),
                                 const SizedBox(height: 16),
                                 TextFormField(
@@ -301,7 +304,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                                     prefixIcon: Icon(Icons.email_outlined),
                                   ),
                                   keyboardType: TextInputType.emailAddress,
-                                  validator: (v) => v!.isEmpty ? 'Введите email' : null,
+                                  validator: (v) => v!.isEmpty ? l10n.loginFillFields : null,
                                 ),
                                 const SizedBox(height: 24),
                                 if (_selectedDates != null)
@@ -310,7 +313,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                                     child: Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text('Итого за ${_selectedDates!.end.difference(_selectedDates!.start).inDays} ночи:', style: theme.textTheme.titleMedium),
+                                        Text(l10n.roomDetailsTotalNights(_selectedDates!.end.difference(_selectedDates!.start).inDays), style: theme.textTheme.titleMedium),
                                         Text(
                                           '\$${(_selectedDates!.end.difference(_selectedDates!.start).inDays * room.price).toStringAsFixed(0)}',
                                           style: theme.textTheme.titleLarge?.copyWith(
@@ -331,7 +334,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                                   ),
                                   child: _isSubmitting
                                       ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                      : const Text('ЗАБРОНИРОВАТЬ', style: TextStyle(fontWeight: FontWeight.bold)),
+                                      : Text(l10n.roomDetailsBookButton, style: const TextStyle(fontWeight: FontWeight.bold)),
                                 ),
                               ],
                             ),
@@ -340,16 +343,15 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                       ),
                       const SizedBox(height: 32),
                       
-                      // Шаг 4: Секция отзывов
                       Text(
-                        'Отзывы гостей',
+                        'меймандар ою',
                         style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 16),
                       reviewsAsync.when(
                         data: (reviews) {
                           if (reviews.isEmpty) {
-                            return const Text('Отзывов пока нет. Будьте первым!');
+                            return Text(l10n.roomDetailsNoReviews);
                           }
                           final avgRating = reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
                           return Column(
@@ -357,14 +359,14 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(Icons.star, color: Colors.orange, size: 28),
+                                  const Icon(Icons.star, color: Colors.orange, size: 28),
                                   const SizedBox(width: 8),
                                   Text(
                                     avgRating.toStringAsFixed(1),
                                     style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                                   ),
                                   const SizedBox(width: 8),
-                                  Text('(${reviews.length} отзывов)', style: theme.textTheme.bodyMedium),
+                                  Text('(${reviews.length})', style: theme.textTheme.bodyMedium),
                                 ],
                               ),
                               const SizedBox(height: 20),
@@ -373,7 +375,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                           );
                         },
                         loading: () => const CircularProgressIndicator(),
-                        error: (err, _) => Text('Ошибка загрузки отзывов: $err'),
+                        error: (err, _) => Text(l10n.errorGeneric(err.toString())),
                       ),
                       const SizedBox(height: 40),
                     ],
@@ -384,7 +386,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Ошибка: $err')),
+        error: (err, _) => Center(child: Text(l10n.errorGeneric(err.toString()))),
       ),
     );
   }
@@ -397,6 +399,7 @@ class _ReviewItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final locale = Localizations.localeOf(context).toString();
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
       child: Column(
@@ -407,7 +410,7 @@ class _ReviewItem extends StatelessWidget {
             children: [
               Text(review.userName, style: const TextStyle(fontWeight: FontWeight.bold)),
               Text(
-                DateFormat('dd.MM.yyyy').format(review.createdAt),
+                DateFormat.yMd(locale).format(review.createdAt),
                 style: theme.textTheme.bodySmall,
               ),
             ],

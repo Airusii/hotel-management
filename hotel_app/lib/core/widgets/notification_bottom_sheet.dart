@@ -1,32 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class NotificationBottomSheet extends StatelessWidget {
   const NotificationBottomSheet({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
     final theme = Theme.of(context);
     
-    // Фейковые данные уведомлений
+    // Фейковые данные уведомлений (теперь локализованные)
     final List<Map<String, dynamic>> notifications = [
       {
-        'title': 'Бронирование подтверждено',
-        'body': 'Ваша бронь номера №302 успешно подтверждена. Ждем вас!',
+        'title': l10n.notificationBookingConfirmed,
+        'body': l10n.notificationBookingConfirmedBody,
         'time': DateTime.now().subtract(const Duration(hours: 2)),
         'isRead': false,
         'icon': Icons.check_circle_outline,
       },
       {
-        'title': 'Уборка завершена',
-        'body': 'Ваш номер был полностью убран и продезинфицирован.',
+        'title': l10n.notificationCleaningDone,
+        'body': l10n.notificationCleaningDoneBody,
         'time': DateTime.now().subtract(const Duration(days: 1)),
         'isRead': true,
         'icon': Icons.cleaning_services_outlined,
       },
       {
-        'title': 'Добро пожаловать!',
-        'body': 'Спасибо, что выбрали Manas Hotel. Приятного отдыха!',
+        'title': l10n.notificationWelcome,
+        'body': l10n.notificationWelcomeBody,
         'time': DateTime.now().subtract(const Duration(days: 2)),
         'isRead': true,
         'icon': Icons.hotel_outlined,
@@ -45,14 +47,14 @@ class NotificationBottomSheet extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Уведомления',
+                  l10n.notificationsTitle,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Закрыть'),
+                  child: Text(l10n.notificationsClose),
                 ),
               ],
             ),
@@ -66,7 +68,7 @@ class NotificationBottomSheet extends StatelessWidget {
                   children: [
                     Icon(Icons.notifications_off_outlined, size: 64, color: theme.colorScheme.outline),
                     const SizedBox(height: 16),
-                    const Text('У вас нет новых уведомлений'),
+                    Text(l10n.notificationsEmpty),
                   ],
                 ),
               ),
@@ -114,7 +116,7 @@ class NotificationBottomSheet extends StatelessWidget {
                           Text(note['body']),
                           const SizedBox(height: 4),
                           Text(
-                            DateFormat('dd MMM, HH:mm').format(note['time']),
+                            DateFormat.MMMd(locale).add_Hm().format(note['time']),
                             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                           ),
                         ],

@@ -4,21 +4,21 @@ import 'package:hotel_app/features/tasks/task_model.dart';
 import 'package:hotel_app/features/tasks/tasks_repository.dart';
 import 'package:hotel_app/features/rooms/rooms_repository.dart';
 import 'package:hotel_app/features/auth/auth_provider.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class EmployeeTasksScreen extends ConsumerWidget {
   const EmployeeTasksScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final tasksAsync = ref.watch(tasksStreamProvider);
     final roomsAsync = ref.watch(roomsStreamProvider);
     
-    // Получаем текущего пользователя для фильтрации личных задач
     final currentUserId = ref.watch(authStateChangesProvider).value?.uid;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Мои задачи'),
+        title: Text(l10n.tasksMyTasksTitle),
         actions: [
           IconButton(
             onPressed: () => ref.refresh(tasksStreamProvider),
@@ -29,24 +29,21 @@ class EmployeeTasksScreen extends ConsumerWidget {
       body: tasksAsync.when(
         data: (allTasks) {
           if (currentUserId == null) {
-            return const Center(child: Text('Пожалуйста, войдите в систему'));
+            return Center(child: Text(l10n.tasksLoginRequired));
           }
 
-          // 1. Фильтрация: статус active И (назначено мне ИЛИ не назначено никому)
           final filteredTasks = allTasks.where((t) {
             final isActive = t.status == TaskStatus.pending || t.status == TaskStatus.inProgress;
             final isForMe = t.assigneeId == currentUserId || t.assigneeId == null;
             return isActive && isForMe;
           }).toList();
 
-          // 2. Сортировка: "В работе" всегда сверху
           filteredTasks.sort((a, b) {
             if (a.status == TaskStatus.inProgress && b.status != TaskStatus.inProgress) return -1;
             if (a.status != TaskStatus.inProgress && b.status == TaskStatus.inProgress) return 1;
             return b.createdAt.compareTo(a.createdAt);
           });
 
-          // 3. Если пусто — показываем заглушку
           if (filteredTasks.isEmpty) {
             return Center(
               child: Column(
@@ -54,13 +51,13 @@ class EmployeeTasksScreen extends ConsumerWidget {
                 children: [
                   Icon(Icons.done_all, size: 64, color: Colors.green.withOpacity(0.5)),
                   const SizedBox(height: 16),
-                  const Text(
-                    'На сегодня задач нет!',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.tasksNoTasksToday,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                  const Text(
-                    'Вы отлично поработали.',
-                    style: TextStyle(color: Colors.grey),
+                  Text(
+                    l10n.tasksWellDone,
+                    style: const TextStyle(color: Colors.grey),
                   ),
                 ],
               ),
@@ -77,7 +74,7 @@ class EmployeeTasksScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(child: Text('Ошибка: $error')),
+        error: (error, stackTrace) => Center(child: Text(l10n.errorGeneric(error.toString()))),
       ),
     );
   }
@@ -91,15 +88,16 @@ class _EmployeeTaskCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final isInProgress = task.status == TaskStatus.inProgress;
 
-    String roomName = 'Общая территория';
+    String roomName = l10n.tasksCommonArea;
     if (task.roomId != null) {
       roomsAsync.whenData((rooms) {
         try {
           final room = rooms.firstWhere((r) => r.id == task.roomId);
-          roomName = 'Номер № ${room.name}';
+          roomName = l10n.tasksRoomLabel(room.name);
         } catch (_) {}
       });
     }
@@ -119,7 +117,6 @@ class _EmployeeTaskCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Бейдж комнаты
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
@@ -135,7 +132,6 @@ class _EmployeeTaskCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 12),
-            // Заголовок
             Text(
               task.title,
               style: theme.textTheme.headlineSmall?.copyWith(
@@ -143,7 +139,6 @@ class _EmployeeTaskCard extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            // Описание
             if (task.description.isNotEmpty)
               Text(
                 task.description,
@@ -152,7 +147,6 @@ class _EmployeeTaskCard extends ConsumerWidget {
                 ),
               ),
             const SizedBox(height: 20),
-            // Кнопка действия
             SizedBox(
               width: double.infinity,
               height: 56,
@@ -164,14 +158,14 @@ class _EmployeeTaskCard extends ConsumerWidget {
                       style: OutlinedButton.styleFrom(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('ВЗЯТЬ В РАБОТУ', style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: Text(l10n.tasksTakeButton, style: const TextStyle(fontWeight: FontWeight.bold)),
                     )
                   : FilledButton.icon(
                       onPressed: () {
                         ref.read(tasksRepositoryProvider).updateTaskStatus(task.id, TaskStatus.completed);
                       },
                       icon: const Icon(Icons.check),
-                      label: const Text('ЗАВЕРШИТЬ', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: Text(l10n.tasksCompleteButton, style: const TextStyle(fontWeight: FontWeight.bold)),
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.green,
                         foregroundColor: Colors.white,

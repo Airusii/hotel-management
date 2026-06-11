@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotel_app/features/admin/widgets/add_service_dialog.dart';
 import 'package:hotel_app/features/services/services_provider.dart';
 import 'package:hotel_app/features/services/services_repository.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class AdminServicesScreen extends ConsumerWidget {
   const AdminServicesScreen({super.key});
 
@@ -20,11 +20,12 @@ class AdminServicesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final servicesAsync = ref.watch(servicesStreamProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hotel Services'),
+        title: Text(l10n.adminServicesTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -61,7 +62,7 @@ class AdminServicesScreen extends ConsumerWidget {
           },
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => Center(child: Text(l10n.errorGeneric(err.toString()))),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showDialog(

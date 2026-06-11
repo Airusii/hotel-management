@@ -1,25 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 /// Жизненный цикл брони: pending → confirmed → checkedIn → checkedOut
 /// cancelled — отмена на любом этапе до заселения
 /// completed — устаревшее значение, сохранено для совместимости с базой
 enum BookingStatus { pending, confirmed, checkedIn, checkedOut, completed, cancelled }
 
 extension BookingStatusX on BookingStatus {
-  String get label {
+  String getLocalizedLabel(AppLocalizations l10n) {
     switch (this) {
       case BookingStatus.pending:
-        return 'Заявка';
+        return 'Билдирме';
       case BookingStatus.confirmed:
-        return 'Подтверждено';
+        return 'Ырасталды';
       case BookingStatus.checkedIn:
-        return 'Заехал';
+        return 'Конду';
       case BookingStatus.checkedOut:
       case BookingStatus.completed:
-        return 'Выехал';
+        return 'Чыкты';
       case BookingStatus.cancelled:
-        return 'Отменено';
+        return 'Жоктолду';
+    }
+  }
+
+  // Оставляем label для обратной совместимости или логов (на англ/рус по умолчанию)
+  String get label {
+    switch (this) {
+      case BookingStatus.pending: return 'Заявка';
+      case BookingStatus.confirmed: return 'Подтверждено';
+      case BookingStatus.checkedIn: return 'Заехал';
+      case BookingStatus.checkedOut:
+      case BookingStatus.completed: return 'Выехал';
+      case BookingStatus.cancelled: return 'Отменено';
     }
   }
 
@@ -50,7 +62,7 @@ class Booking {
   final DateTime checkOut;
   final BookingStatus status;
   final double totalPrice;
-  final DateTime? createdAt; // 🚀 Новое поле для сортировки заявок
+  final DateTime? createdAt;
 
   Booking({
     required this.id,

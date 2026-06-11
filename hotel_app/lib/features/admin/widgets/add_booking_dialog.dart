@@ -92,7 +92,7 @@ class _AddBookingDialogState extends ConsumerState<AddBookingDialog> {
     final theme = Theme.of(context);
 
     return AlertDialog(
-      title: const Text('Новое бронирование (Админ)'),
+      title: const Text('Жаны брондоо (Админ)'),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -105,7 +105,7 @@ class _AddBookingDialogState extends ConsumerState<AddBookingDialog> {
                   onPressed: () => _pickDates(rooms),
                   icon: const Icon(Icons.date_range),
                   label: Text(_selectedDates == null
-                      ? 'Выберите даты заезда и выезда'
+                      ? 'Кируу жана чыгуу датасын танданыз'
                       : '${_selectedDates!.start.day}.${_selectedDates!.start.month} - ${_selectedDates!.end.day}.${_selectedDates!.end.month}'),
                 ),
                 loading: () => const LinearProgressIndicator(),

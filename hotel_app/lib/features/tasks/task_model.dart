@@ -1,6 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 enum TaskStatus { pending, inProgress, completed }
+
+extension TaskStatusX on TaskStatus {
+  String getLocalizedLabel(AppLocalizations l10n) {
+    switch (this) {
+      case TaskStatus.pending:
+        return l10n.tasksPending;
+      case TaskStatus.inProgress:
+        return l10n.tasksInProgress;
+      case TaskStatus.completed:
+        return l10n.tasksDone;
+    }
+  }
+}
 
 class Task {
   final String id;

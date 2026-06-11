@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -27,13 +27,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final name = _nameController.text.trim();
 
     if (email.isEmpty || password.isEmpty || (!_isLoginMode && name.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Пожалуйста, заполните все поля')),
+        SnackBar(content: Text(l10n.loginFillFields)),
       );
       return;
     }
@@ -42,19 +43,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       if (_isLoginMode) {
-        // Логика входа
         await FirebaseAuth.instance.signInWithEmailAndPassword(
           email: email,
           password: password,
         );
       } else {
-        // Логика регистрации
         UserCredential cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
           email: email,
           password: password,
         );
 
-        // Сохранение профиля гостя в Firestore
         await FirebaseFirestore.instance.collection('users').doc(cred.user!.uid).set({
           'name': name,
           'email': email,
@@ -62,13 +60,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           'createdAt': FieldValue.serverTimestamp(),
         });
       }
-      // Редирект произойдет автоматически через GoRouter и authStateChangesProvider
     } on FirebaseAuthException catch (e) {
-      String message = 'Ошибка авторизации';
-      if (e.code == 'user-not-found') message = 'Пользователь не найден';
-      if (e.code == 'wrong-password') message = 'Неверный пароль';
-      if (e.code == 'email-already-in-use') message = 'Этот email уже зарегистрирован';
-      if (e.code == 'weak-password') message = 'Пароль слишком простой';
+      String message = l10n.errorGeneric(e.code);
+      if (e.code == 'user-not-found') message = l10n.loginUserNotFound;
+      if (e.code == 'wrong-password') message = l10n.loginWrongPassword;
+      if (e.code == 'email-already-in-use') message = l10n.loginEmailInUse;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -78,7 +74,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Произошла ошибка: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.errorGeneric(e.toString())), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -89,10 +85,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isLoginMode ? 'Вход в систему' : 'Регистрация'),
+        title: Text(_isLoginMode ? l10n.loginTitle : l10n.registerTitle),
         centerTitle: true,
       ),
       body: Center(
@@ -110,7 +107,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // Поле Имени с плавной анимацией
                 AnimatedSize(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
@@ -119,10 +115,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           padding: const EdgeInsets.only(bottom: 16),
                           child: TextFormField(
                             controller: _nameController,
-                            decoration: const InputDecoration(
-                              labelText: 'Ваше имя',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.person_outline),
+                            decoration: InputDecoration(
+                              labelText: l10n.registerName,
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.person_outline),
                             ),
                           ),
                         )
@@ -141,10 +137,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _passwordController,
-                  decoration: const InputDecoration(
-                    labelText: 'Пароль',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.lock_outline),
+                  decoration: InputDecoration(
+                    labelText: l10n.loginPassword,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.lock_outline),
                   ),
                   obscureText: true,
                 ),
@@ -162,7 +158,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                           )
                         : Text(
-                            _isLoginMode ? 'Войти' : 'Зарегистрироваться',
+                            _isLoginMode ? l10n.loginButton : l10n.registerButton,
                             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                   ),
@@ -177,8 +173,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   },
                   child: Text(
                     _isLoginMode
-                        ? 'Нет аккаунта? Зарегистрироваться'
-                        : 'Уже есть аккаунт? Войти',
+                        ? l10n.registerButton
+                        : l10n.loginButton,
                   ),
                 ),
               ],

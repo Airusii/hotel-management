@@ -6,46 +6,41 @@ import 'package:hotel_app/features/bookings/bookings_repository.dart';
 import 'package:hotel_app/features/rooms/rooms_repository.dart';
 import 'package:hotel_app/features/rooms/room_model.dart';
 import 'package:intl/intl.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class MyBookingsScreen extends ConsumerWidget {
   const MyBookingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
     final currentUser = ref.watch(authStateChangesProvider).value;
     final roomsAsync = ref.watch(roomsStreamProvider);
     final theme = Theme.of(context);
-    final dateFormat = DateFormat('dd.MM.yyyy');
+    final dateFormat = DateFormat.yMd(locale);
 
     if (currentUser == null) {
-      return const Scaffold(
-        body: Center(child: Text('Пожалуйста, войдите в систему')),
+      return Scaffold(
+        body: Center(child: Text(l10n.navLogin)),
       );
     }
 
-    // Используем специализированный провайдер — только брони текущего пользователя
     final bookingsAsync = ref.watch(userBookingsProvider(currentUser.uid));
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Мои бронирования'),
+        title: Text(l10n.myBookingsTitle),
         centerTitle: true,
       ),
       body: bookingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Ошибка загрузки: $err')),
+        error: (err, _) => Center(child: Text(l10n.errorGeneric(err.toString()))),
         data: (bookings) {
-          if (currentUser == null) {
-            return const Center(child: Text('Пожалуйста, войдите в систему'));
-          }
-
-          // Шаг 3: Фильтрация для текущего пользователя и сортировка по убыванию даты
           final myBookings = bookings
               .where((b) => b.userId == currentUser.uid)
               .toList()
             ..sort((a, b) => b.checkIn.compareTo(a.checkIn));
 
-          // Состояние, если список пуст
           if (myBookings.isEmpty) {
             return Center(
               child: Column(
@@ -58,7 +53,7 @@ class MyBookingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'У вас пока нет бронирований',
+                    l10n.myBookingsEmpty,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: theme.colorScheme.outline,
                     ),
@@ -70,7 +65,7 @@ class MyBookingsScreen extends ConsumerWidget {
 
           return roomsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => const Center(child: Text('Ошибка загрузки данных о номерах')),
+            error: (err, _) => Center(child: Text(l10n.errorGeneric('Rooms'))),
             data: (rooms) {
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -78,12 +73,11 @@ class MyBookingsScreen extends ConsumerWidget {
                 itemBuilder: (context, index) {
                   final booking = myBookings[index];
 
-                  // Поиск комнаты для получения названия
                   final room = rooms.firstWhere(
                         (r) => r.id == booking.roomId,
                     orElse: () => Room(
                       id: '',
-                      name: 'Номер удален',
+                      name: '?',
                       typeId: '',
                       price: 0,
                       status: RoomStatus.available,
@@ -103,22 +97,20 @@ class MyBookingsScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Шаг 4: Заголовок и статус
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Номер: ${room.name}',
+                                '${l10n.homeRoomType}: ${room.name}',
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                              _buildStatusChip(booking.status),
+                              _buildStatusChip(context, booking.status),
                             ],
                           ),
                           const SizedBox(height: 12),
 
-                          // Даты проживания
                           Row(
                             children: [
                               Icon(Icons.calendar_today, size: 16, color: theme.colorScheme.primary),
@@ -131,36 +123,32 @@ class MyBookingsScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 8),
 
-                          // Имя гостя
                           Text(
-                            'На имя: ${booking.guestName}',
+                            '${l10n.myBookingsGuestName}: ${booking.guestName}',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
 
-                          // 🚀 ДОБАВЛЕН БЛОК КНОПКИ ЭКСПРЕСС-ВЫЕЗДА
                           if (booking.status == BookingStatus.checkedIn) ...[
                             const SizedBox(height: 16),
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton.icon(
-                                onPressed: () => _confirmCheckOut(context, ref, booking, room.name),
+                                onPressed: () => _confirmCheckOut(context, ref, booking, room.name, l10n),
                                 icon: const Icon(Icons.exit_to_app, color: Colors.red),
-                                label: const Text('Экспресс-выезд', style: TextStyle(color: Colors.red)),
+                                label: Text(l10n.myBookingsExpressCheckout, style: const TextStyle(color: Colors.red)),
                                 style: OutlinedButton.styleFrom(
                                   side: const BorderSide(color: Colors.red),
                                 ),
                               ),
                             ),
                           ],
-                          // 🚀 КОНЕЦ БЛОКА
 
                           const SizedBox(height: 16),
                           const Divider(),
                           const SizedBox(height: 8),
 
-                          // Итоговая сумма
                           Align(
                             alignment: Alignment.centerRight,
                             child: Text(
@@ -184,17 +172,16 @@ class MyBookingsScreen extends ConsumerWidget {
     );
   }
 
-  // 🚀 ДОБАВЛЕН МЕТОД ПОДТВЕРЖДЕНИЯ ВЫЕЗДА
-  void _confirmCheckOut(BuildContext context, WidgetRef ref, Booking booking, String roomName) {
+  void _confirmCheckOut(BuildContext context, WidgetRef ref, Booking booking, String roomName, AppLocalizations l10n) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Выезд из номера'),
-        content: Text('Вы действительно хотите завершить проживание в номере $roomName?'),
+        title: Text(l10n.myBookingsCheckoutDialogTitle),
+        content: Text('${l10n.myBookingsCheckoutDialogBody}? ($roomName)'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Отмена'),
+            child: Text(l10n.errorGeneric('Cancel')),
           ),
           FilledButton(
             onPressed: () async {
@@ -206,15 +193,15 @@ class MyBookingsScreen extends ConsumerWidget {
               if (ctx.mounted) Navigator.pop(ctx);
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Подтвердить выезд'),
+            child: Text(l10n.bookingActionConfirmed),
           ),
         ],
       ),
     );
   }
-  // 🚀 КОНЕЦ МЕТОДА
 
-  Widget _buildStatusChip(BookingStatus status) {
+  Widget _buildStatusChip(BuildContext context, BookingStatus status) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -223,7 +210,7 @@ class MyBookingsScreen extends ConsumerWidget {
         border: Border.all(color: status.color.withOpacity(0.5)),
       ),
       child: Text(
-        status.label,
+        status.getLocalizedLabel(l10n),
         style: TextStyle(
           color: status.color,
           fontSize: 12,

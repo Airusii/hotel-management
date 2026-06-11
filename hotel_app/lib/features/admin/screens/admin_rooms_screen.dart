@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotel_app/features/admin/widgets/add_room_dialog.dart';
 import 'package:hotel_app/features/rooms/rooms_repository.dart';
 import 'package:hotel_app/features/services/services_provider.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class AdminRoomsScreen extends ConsumerWidget {
   const AdminRoomsScreen({super.key});
 
@@ -20,12 +20,13 @@ class AdminRoomsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final roomsAsyncValue = ref.watch(roomsStreamProvider);
     final servicesAsyncValue = ref.watch(servicesStreamProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Rooms Management'),
+        title: Text(l10n.adminRoomsTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
@@ -88,7 +89,7 @@ class AdminRoomsScreen extends ConsumerWidget {
           },
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
+        error: (err, stack) => Center(child: Text(l10n.errorGeneric(err.toString()))),
       ),
     );
   }

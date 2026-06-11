@@ -5,20 +5,22 @@ import 'package:hotel_app/features/bookings/bookings_repository.dart';
 import 'package:hotel_app/features/bookings/booking_service.dart';
 import 'package:hotel_app/features/rooms/rooms_repository.dart';
 import 'package:intl/intl.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class AdminRequestsScreen extends ConsumerWidget {
   const AdminRequestsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
     final pendingBookingsAsync = ref.watch(pendingBookingsProvider);
     final roomsAsync = ref.watch(roomsStreamProvider);
     final theme = Theme.of(context);
-    final dateFormat = DateFormat('dd.MM.yyyy');
+    final dateFormat = DateFormat.yMd(locale);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Новые заявки'),
+        title: Text(l10n.adminRequestsTitle),
         centerTitle: true,
       ),
       body: pendingBookingsAsync.when(
@@ -31,16 +33,15 @@ class AdminRequestsScreen extends ConsumerWidget {
               children: [
                 const Icon(Icons.error_outline, size: 48, color: Colors.red),
                 const SizedBox(height: 16),
-                Text('Ошибка загрузки заявок', style: theme.textTheme.titleMedium),
+                Text(l10n.adminRequestsErrorLoading, style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
-                const Text(
-                  'Возможно, нужно создать составной индекс в Firebase Console:\n'
-                  'Коллекция "bookings" → поля: status (По возрастанию) + createdAt (По убыванию)',
+                Text(
+                  l10n.adminRequestsIndexHint,
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 const SizedBox(height: 12),
-                Text('Детали: $err',
+                Text(l10n.adminRequestsDetails(err.toString()),
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontSize: 11, color: Colors.grey)),
               ],
@@ -57,7 +58,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                       size: 80, color: theme.colorScheme.outline.withOpacity(0.5)),
                   const SizedBox(height: 16),
                   Text(
-                    'Новых заявок нет',
+                    l10n.adminRequestsEmpty,
                     style: theme.textTheme.titleMedium
                         ?.copyWith(color: theme.colorScheme.outline),
                   ),
@@ -68,7 +69,7 @@ class AdminRequestsScreen extends ConsumerWidget {
 
           return roomsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => Center(child: Text('Ошибка загрузки номеров: $err')),
+            error: (err, _) => Center(child: Text(l10n.adminRequestsError(err.toString()))),
             data: (rooms) {
               return ListView.builder(
                 padding: const EdgeInsets.all(16),
@@ -136,7 +137,7 @@ class AdminRequestsScreen extends ConsumerWidget {
                               Icon(Icons.door_front_door_outlined,
                                   size: 16, color: theme.colorScheme.outline),
                               const SizedBox(width: 8),
-                              Text('Номер: ${room.name} (${room.typeId})'),
+                              Text(l10n.adminRequestsRoomLabel(room.name, room.typeId)),
                             ],
                           ),
                           // Email если есть
@@ -161,13 +162,13 @@ class AdminRequestsScreen extends ConsumerWidget {
                               Expanded(
                                 child: OutlinedButton.icon(
                                   onPressed: () =>
-                                      _handleCancel(context, booking.id),
+                                      _handleCancel(context, booking.id, l10n),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: Colors.red,
                                     side: const BorderSide(color: Colors.red),
                                   ),
                                   icon: const Icon(Icons.close, size: 18),
-                                  label: const Text('Отклонить'),
+                                  label: Text(l10n.adminRequestsRejectButton),
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -176,9 +177,9 @@ class AdminRequestsScreen extends ConsumerWidget {
                                 flex: 2,
                                 child: FilledButton.icon(
                                   onPressed: () =>
-                                      _handleConfirm(context, booking.id),
+                                      _handleConfirm(context, booking.id, l10n),
                                   icon: const Icon(Icons.check, size: 18),
-                                  label: const Text('Подтвердить'),
+                                  label: Text(l10n.adminRequestsConfirm),
                                 ),
                               ),
                             ],
@@ -196,13 +197,13 @@ class AdminRequestsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _handleConfirm(BuildContext context, String bookingId) async {
+  Future<void> _handleConfirm(BuildContext context, String bookingId, AppLocalizations l10n) async {
     try {
       await BookingService().confirmBooking(bookingId);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✅ Заявка подтверждена'),
+          SnackBar(
+            content: Text('✅ ${l10n.adminCalendarBookingConfirmed}'),
             backgroundColor: Colors.green,
           ),
         );
@@ -210,27 +211,26 @@ class AdminRequestsScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.adminRequestsError(e.toString())), backgroundColor: Colors.red),
         );
       }
     }
   }
 
-  Future<void> _handleCancel(BuildContext context, String bookingId) async {
+  Future<void> _handleCancel(BuildContext context, String bookingId, AppLocalizations l10n) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Отклонить заявку?'),
-        content: const Text(
-            'Заявка будет отменена. Гость получит уведомление (если настроено).'),
+        title: Text(l10n.adminRequestsRejectTitle),
+        content: Text(l10n.adminRequestsRejectBody),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Назад')),
+              child: Text(l10n.adminRequestsBack)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Отклонить'),
+            child: Text(l10n.adminRequestsRejectButton),
           ),
         ],
       ),
@@ -242,8 +242,8 @@ class AdminRequestsScreen extends ConsumerWidget {
       await BookingService().cancelBooking(bookingId);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Заявка отклонена'),
+          SnackBar(
+            content: Text(l10n.adminRequestsRejected),
             backgroundColor: Colors.orange,
           ),
         );
@@ -251,7 +251,7 @@ class AdminRequestsScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.adminRequestsError(e.toString())), backgroundColor: Colors.red),
         );
       }
     }
@@ -264,6 +264,7 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -272,7 +273,7 @@ class _StatusChip extends StatelessWidget {
         border: Border.all(color: status.color.withOpacity(0.5)),
       ),
       child: Text(
-        status.label,
+        status.getLocalizedLabel(l10n),
         style: TextStyle(color: status.color, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );

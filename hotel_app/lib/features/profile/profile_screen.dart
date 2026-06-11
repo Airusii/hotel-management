@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hotel_app/features/auth/auth_provider.dart';
 import 'package:hotel_app/core/widgets/notification_bottom_sheet.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class UserProfileScreen extends ConsumerStatefulWidget {
   const UserProfileScreen({super.key});
 
@@ -25,12 +25,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
   }
 
   void _login() {
+    final l10n = AppLocalizations.of(context)!;
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заполните все поля')),
+        SnackBar(content: Text(l10n.loginFillFields)),
       );
       return;
     }
@@ -39,22 +40,23 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
   }
 
   void _signOut() async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Выход'),
-        content: const Text('Вы уверены, что хотите выйти из аккаунта?'),
+        title: Text(l10n.profileSignOutConfirmTitle),
+        content: Text(l10n.profileSignOutConfirmBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Отмена'),
+            child: Text(l10n.cancel), // Use generic cancel if available or hardcode briefly
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('Выйти'),
+            child: Text(l10n.profileSignOut),
           ),
         ],
       ),
@@ -77,12 +79,13 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     ref.listen(authProvider, (previous, next) {
       if (next.status == AuthStatus.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next.errorMessage ?? 'Ошибка авторизации'),
+            content: Text(next.errorMessage ?? l10n.errorGeneric('Auth Error')),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -102,6 +105,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
   // ── ФОРМА ВХОДА ────────────────────────────────────────────────
   Widget _buildLoginForm(BuildContext context, bool isLoading) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: SafeArea(
@@ -124,9 +128,9 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text(
-                    'Войти в аккаунт',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.loginTitle,
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 36),
@@ -144,7 +148,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                   TextField(
                     controller: _passwordController,
                     decoration: InputDecoration(
-                      labelText: 'Пароль',
+                      labelText: l10n.loginPassword,
                       prefixIcon: const Icon(Icons.lock_outline),
                       border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
@@ -160,7 +164,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                     onPressed: isLoading ? null : _login,
                     child: isLoading
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Войти'),
+                        : Text(l10n.loginButton),
                   ),
                 ],
               ),
@@ -174,17 +178,18 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
   // ── НАСТРОЙКИ ПРОФИЛЯ (КАБИНЕТ) ────────────────────────────────
   Widget _buildProfileSettings(BuildContext context, AuthState authState) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final roleAsyncValue = ref.watch(userRoleProvider);
     final user = FirebaseAuth.instance.currentUser;
 
     final roleName = roleAsyncValue.when(
-      data: (roleStr) => _roleLabelFromString(roleStr),
-      loading: () => 'Загрузка...',
-      error: (_, __) => 'Ошибка роли',
+      data: (roleStr) => _roleLabelFromString(roleStr, l10n),
+      loading: () => '...',
+      error: (_, __) => 'Error',
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Кабинет')),
+      appBar: AppBar(title: Text(l10n.profileTitle)),
       body: ListView(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
         children: [
@@ -199,7 +204,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  user?.displayName ?? 'Пользователь',
+                  user?.displayName ?? l10n.profileRoleClient,
                   style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
@@ -211,42 +216,32 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          const _SectionHeader(label: 'Мои действия'),
+          _SectionHeader(label: l10n.profileMyActions),
           _ProfileTile(
             icon: Icons.calendar_month_outlined,
-            title: 'Бронирования',
+            title: l10n.myBookingsTitle,
             onTap: () => context.go('/profile/my_bookings'),
           ),
           _ProfileTile(
-            icon: Icons.star_outline,
-            title: 'Мои отзывы',
-            onTap: () => context.go('/profile/my_reviews'),
-          ),
-          _ProfileTile(
             icon: Icons.help_outline,
-            title: 'Помощь и FAQ',
+            title: l10n.faqTitle,
             onTap: () => context.go('/profile/faq'),
           ),
           const SizedBox(height: 16),
-          const _SectionHeader(label: 'Настройки'),
+          _SectionHeader(label: l10n.profileSettings),
           _ProfileTile(
             icon: Icons.settings_outlined,
-            title: 'Настройки профиля',
+            title: l10n.profileSettingsTitle,
             onTap: () => context.go('/profile/settings'),
           ),
-          _ProfileTile(
-            icon: Icons.notifications_outlined,
-            title: 'Уведомления',
-            badge: true,
-            onTap: () => _showNotificationsSheet(context),
-          ),
+
           const SizedBox(height: 32),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: OutlinedButton.icon(
               onPressed: _signOut,
               icon: Icon(Icons.logout, color: theme.colorScheme.error),
-              label: Text('Выйти из аккаунта', style: TextStyle(color: theme.colorScheme.error)),
+              label: Text(l10n.profileSignOut, style: TextStyle(color: theme.colorScheme.error)),
               style: OutlinedButton.styleFrom(
                 minimumSize: const Size.fromHeight(56),
                 side: BorderSide(color: theme.colorScheme.error.withOpacity(0.5)),
@@ -258,11 +253,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
     );
   }
 
-  String _roleLabelFromString(String? role) {
+  String _roleLabelFromString(String? role, AppLocalizations l10n) {
     switch (role) {
-      case 'admin': return 'Администратор';
-      case 'employee': return 'Сотрудник';
-      default: return 'Клиент';
+      case 'admin': return l10n.profileRoleAdmin;
+      case 'employee': return l10n.profileRoleEmployee;
+      default: return l10n.profileRoleClient;
     }
   }
 }

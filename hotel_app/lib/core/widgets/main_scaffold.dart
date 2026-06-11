@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hotel_app/features/auth/auth_provider.dart';
+import 'package:hotel_app/l10n/app_localizations.dart';
 
 class MainScaffold extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
@@ -24,14 +25,15 @@ class MainScaffold extends ConsumerWidget {
     final isAuthenticated = authState.value != null;
     final userRoleAsync = ref.watch(userRoleProvider);
     final isWide = MediaQuery.of(context).size.width >= 600;
+    final l10n = AppLocalizations.of(context)!;
 
-    // Список всех возможных вкладок (Обновлен: FAQ перенесен внутрь Кабинета)
+    // Список всех возможных вкладок
     final List<({IconData icon, String label, int branchIndex})> allItems = [
-      (icon: Icons.home, label: 'Главная', branchIndex: 0),
-      (icon: Icons.room_service_outlined, label: 'Услуги', branchIndex: 1),
-      (icon: Icons.person, label: isAuthenticated ? 'Кабинет' : 'Войти', branchIndex: 2),
-      (icon: Icons.task, label: 'Задачи', branchIndex: 3),
-      (icon: Icons.settings, label: 'Админка', branchIndex: 4),
+      (icon: Icons.home, label: l10n.navHome, branchIndex: 0),
+      (icon: Icons.room_service_outlined, label: l10n.servicesTitle, branchIndex: 1),
+      (icon: Icons.person, label: isAuthenticated ? l10n.navProfile : l10n.navLogin, branchIndex: 2),
+      (icon: Icons.task, label: l10n.tasksTitle, branchIndex: 3),
+      (icon: Icons.settings, label: l10n.adminDashboardTitle, branchIndex: 4),
     ];
 
     // Логика фильтрации вкладок

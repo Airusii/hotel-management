@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class AdminEmployeesScreen extends ConsumerStatefulWidget {
   const AdminEmployeesScreen({super.key});
 
@@ -14,9 +14,11 @@ class AdminEmployeesScreen extends ConsumerStatefulWidget {
 class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Управление персоналом'),
+        title: Text(l10n.adminEmployeesTitle),
         centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -25,7 +27,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
             .where('role', isEqualTo: 'employee')
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) return const Center(child: Text('Ошибка загрузки'));
+          if (snapshot.hasError) return Center(child: Text(l10n.adminEmployeesErrorLoading));
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -33,7 +35,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
           final employees = snapshot.data!.docs;
 
           if (employees.isEmpty) {
-            return const Center(child: Text('Сотрудников пока нет'));
+            return Center(child: Text(l10n.adminEmployeesEmpty));
           }
 
           return ListView.builder(
@@ -41,7 +43,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
             itemCount: employees.length,
             itemBuilder: (context, index) {
               final data = employees[index].data() as Map<String, dynamic>;
-              final String name = data['name'] ?? 'Без имени';
+              final String name = data['name'] ?? l10n.adminEmployeesNoName;
               final String email = data['email'] ?? '';
               
               return Card(
@@ -70,7 +72,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddEmployeeDialog(context),
-        label: const Text('Добавить сотрудника'),
+        label: Text(l10n.adminEmployeesAddDialog),
         icon: const Icon(Icons.person_add_alt_1),
       ),
     );
@@ -79,7 +81,7 @@ class _AdminEmployeesScreenState extends ConsumerState<AdminEmployeesScreen> {
   void _showAddEmployeeDialog(BuildContext context) {
     showDialog(
       context: context,
-      barrierDismissible: false, // Запрещаем закрытие во время загрузки
+      barrierDismissible: false,
       builder: (context) => const _AddEmployeeDialog(),
     );
   }
@@ -109,28 +111,26 @@ class _AddEmployeeDialogState extends State<_AddEmployeeDialog> {
   }
 
   Future<void> _registerEmployee() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
     String tempAppName = 'TempRegisterApp-${DateTime.now().millisecondsSinceEpoch}';
-    FirebaseApp? secondaryApp; // Объявляем ЗА пределами try
+    FirebaseApp? secondaryApp;
 
     try {
-      // 1. Создаем временный инстанс
       secondaryApp = await Firebase.initializeApp(
         name: tempAppName,
         options: Firebase.app().options,
       );
 
-      // 2. Регистрация в Auth
       UserCredential userCred = await FirebaseAuth.instanceFor(app: secondaryApp)
           .createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // 3. Сохранение данных в основной Firestore
       await FirebaseFirestore.instance.collection('users').doc(userCred.user!.uid).set({
         'name': _nameController.text.trim(),
         'email': _emailController.text.trim(),
@@ -141,17 +141,17 @@ class _AddEmployeeDialogState extends State<_AddEmployeeDialog> {
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Сотрудник успешно зарегистрирован!'),
+          SnackBar(
+            content: Text(l10n.adminEmployeesRegistered),
             backgroundColor: Colors.green,
           ),
         );
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'Ошибка регистрации';
-      if (e.code == 'email-already-in-use') message = 'Этот email уже занят';
-      if (e.code == 'weak-password') message = 'Слишком простой пароль (мин. 6 симв.)';
-      if (e.code == 'invalid-email') message = 'Некорректный формат email';
+      String message = l10n.adminEmployeesRegisterError;
+      if (e.code == 'email-already-in-use') message = l10n.adminEmployeesEmailInUse;
+      if (e.code == 'weak-password') message = l10n.adminEmployeesWeakPassword;
+      if (e.code == 'invalid-email') message = l10n.adminEmployeesInvalidEmail;
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -161,11 +161,10 @@ class _AddEmployeeDialogState extends State<_AddEmployeeDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Произошла ошибка: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.adminEmployeesError(e.toString())), backgroundColor: Colors.red),
         );
       }
     } finally {
-      // 4. Очистка временного инстанса ТЕПЕРЬ ТУТ. Выполнится в 100% случаев.
       if (secondaryApp != null) {
         await secondaryApp.delete();
       }
@@ -175,8 +174,10 @@ class _AddEmployeeDialogState extends State<_AddEmployeeDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return AlertDialog(
-      title: const Text('Новый сотрудник'),
+      title: Text(l10n.adminEmployeesAddDialog),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -186,29 +187,29 @@ class _AddEmployeeDialogState extends State<_AddEmployeeDialog> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Имя и фамилия',
-                  prefixIcon: Icon(Icons.person_outline),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.adminEmployeesName,
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: const OutlineInputBorder(),
                 ),
-                validator: (val) => (val == null || val.isEmpty) ? 'Введите имя' : null,
+                validator: (val) => (val == null || val.isEmpty) ? l10n.adminEmployeesEnterName : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.adminEmployeesEmail,
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: const OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
-                validator: (val) => (val == null || val.isEmpty) ? 'Введите email' : null,
+                validator: (val) => (val == null || val.isEmpty) ? l10n.adminEmployeesEnterEmail : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _passwordController,
                 decoration: InputDecoration(
-                  labelText: 'Пароль',
+                  labelText: l10n.adminEmployeesPassword,
                   prefixIcon: const Icon(Icons.lock_outline),
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
@@ -217,7 +218,7 @@ class _AddEmployeeDialogState extends State<_AddEmployeeDialog> {
                   ),
                 ),
                 obscureText: _obscurePassword,
-                validator: (val) => (val?.length ?? 0) < 6 ? 'Минимум 6 символов' : null,
+                validator: (val) => (val?.length ?? 0) < 6 ? l10n.adminEmployeesMinPassword : null,
               ),
             ],
           ),
@@ -226,7 +227,7 @@ class _AddEmployeeDialogState extends State<_AddEmployeeDialog> {
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.pop(context),
-          child: const Text('Отмена'),
+          child: Text(l10n.adminEmployeesCancel),
         ),
         FilledButton(
           onPressed: _isLoading ? null : _registerEmployee,
@@ -236,7 +237,7 @@ class _AddEmployeeDialogState extends State<_AddEmployeeDialog> {
                   height: 20, 
                   child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
                 )
-              : const Text('Зарегистрировать'),
+              : Text(l10n.adminEmployeesRegister),
         ),
       ],
     );

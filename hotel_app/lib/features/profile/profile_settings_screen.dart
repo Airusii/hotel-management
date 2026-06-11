@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hotel_app/l10n/app_localizations.dart';
+import 'package:hotel_app/core/widgets/locale_selector.dart';
 
 class ProfileSettingsScreen extends ConsumerStatefulWidget {
   const ProfileSettingsScreen({super.key});
@@ -43,13 +45,14 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   }
 
   Future<void> _updateProfile() async {
+    final l10n = AppLocalizations.of(context)!;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     final newName = _nameController.text.trim();
     if (newName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Имя не может быть пустым')),
+        SnackBar(content: Text(l10n.loginFillFields)),
       );
       return;
     }
@@ -60,19 +63,16 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
       final lastUpdate = (userDoc.data()?['lastProfileUpdate'] as Timestamp?)?.toDate();
 
-      // Проверка кулдауна
       if (lastUpdate != null && DateTime.now().difference(lastUpdate) < _updateCooldown) {
         final remaining = _updateCooldown - DateTime.now().difference(lastUpdate);
-        throw 'Изменение данных доступно через ${remaining.inHours} ч.';
+        throw l10n.errorGeneric('Wait ${remaining.inHours}h');
       }
 
-      // 1. Обновляем Firebase Auth (для мгновенной реакции UI)
       await user.updateDisplayName(newName);
       if (_selectedAvatarUrl != null) {
         await user.updatePhotoURL(_selectedAvatarUrl);
       }
 
-      // 2. Обновляем Firestore (для постоянного хранения и поиска)
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
         'name': newName,
         'photoUrl': _selectedAvatarUrl,
@@ -81,14 +81,14 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Профиль успешно обновлен!')),
+          SnackBar(content: Text(l10n.profileSettingsTitle)), // Simplified success message
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.errorGeneric(e.toString())), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -97,6 +97,7 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   }
 
   Future<void> _handleChangePassword() async {
+    final l10n = AppLocalizations.of(context)!;
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || user.email == null) return;
 
@@ -104,25 +105,26 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
       await FirebaseAuth.instance.sendPasswordResetEmail(email: user.email!);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Ссылка для смены пароля отправлена на почту')),
+          SnackBar(content: Text(l10n.profileSettingsChangePassword)),
         );
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.errorGeneric(e.toString()))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Настройки профиля')),
+      appBar: AppBar(title: Text(l10n.profileSettingsTitle)),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
           Text(
-            'Выберите аватар',
+            l10n.profileSettingsChooseAvatar,
             style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
@@ -158,10 +160,10 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
           const SizedBox(height: 32),
           TextField(
             controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Ваше имя',
-              border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
-              prefixIcon: Icon(Icons.person_outline),
+            decoration: InputDecoration(
+              labelText: l10n.roomDetailsGuestName,
+              border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
+              prefixIcon: const Icon(Icons.person_outline),
             ),
           ),
           const SizedBox(height: 24),
@@ -177,17 +179,19 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
                     height: 20,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('Сохранить изменения'),
+                : Text(l10n.profileSettingsSave),
           ),
           const SizedBox(height: 32),
+          const LocaleSelectorCard(),
+          const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
-          const Text('Безопасность', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(l10n.profileSettingsSecurity, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
           OutlinedButton.icon(
             onPressed: _isLoading ? null : _handleChangePassword,
             icon: const Icon(Icons.lock_reset),
-            label: const Text('Изменить пароль'),
+            label: Text(l10n.profileSettingsChangePassword),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size.fromHeight(56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

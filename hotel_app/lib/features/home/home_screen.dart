@@ -10,6 +10,8 @@ import 'package:hotel_app/features/reviews/reviews_repository.dart';
 import 'package:hotel_app/features/reviews/review_model.dart';
 import 'package:intl/intl.dart';
 import 'package:hotel_app/features/news/widgets/news_carousel.dart';
+import 'package:hotel_app/l10n/app_localizations.dart';
+import 'package:hotel_app/core/widgets/locale_selector.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -57,6 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final roomsAsync = ref.watch(roomsStreamProvider);
     final bookingsAsync = ref.watch(bookingsStreamProvider);
     final roomTypesAsync = ref.watch(roomTypesStreamProvider);
@@ -68,11 +71,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       appBar: AppBar(
         title: const Text('Manas Hotel', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          const LocaleSelectorButton(),
           authState.when(
             data: (user) => IconButton(
               icon: const Icon(Icons.person_outline),
               onPressed: () => context.go('/profile'),
-              tooltip: user != null ? 'Профиль' : 'Войти',
+              tooltip: user != null ? l10n.navProfile : l10n.navLogin,
             ),
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
@@ -88,14 +92,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
 
-          // 🚀 ДОБАВЛЕНА КНОПКА УСЛУГ
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: FilledButton.icon(
                 onPressed: () => context.push('/home/services'),
                 icon: const Icon(Icons.room_service),
-                label: const Text('Заказать услуги в номер'),
+                label: Text(l10n.servicesTitle),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -103,7 +106,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
-          // --------------------------
 
           SliverToBoxAdapter(
             child: Padding(
@@ -134,7 +136,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               Expanded(
                                 child: Text(
                                   _searchDates == null
-                                      ? 'Выберите даты проживания'
+                                      ? l10n.homeSearchDates
                                       : '${DateFormat('dd.MM').format(_searchDates!.start)} — ${DateFormat('dd.MM').format(_searchDates!.end)}',
                                   style: TextStyle(
                                     color: _searchDates == null ? theme.colorScheme.onSurfaceVariant : theme.colorScheme.onSurface,
@@ -160,16 +162,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                             prefixIcon: const Icon(Icons.king_bed_outlined),
-                            hintText: 'Тип номера',
+                            hintText: l10n.homeRoomType,
                           ),
                           items: [
-                            const DropdownMenuItem(value: null, child: Text('Все типы')),
+                            DropdownMenuItem(value: null, child: Text(l10n.homeAllTypes)),
                             ...types.map((type) => DropdownMenuItem(value: type, child: Text(type))),
                           ],
                           onChanged: (val) => setState(() => _selectedType = val),
                         ),
                         loading: () => const LinearProgressIndicator(),
-                        error: (_, __) => const Text('Ошибка загрузки типов'),
+                        error: (_, __) => Text(l10n.errorGeneric('')),
                       ),
                     ],
                   ),
@@ -183,15 +185,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               data: (bookings) {
                 final filteredRooms = _filterRooms(rooms, bookings);
                 if (filteredRooms.isEmpty) {
-                  return const SliverToBoxAdapter(
+                  return SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 60),
+                      padding: const EdgeInsets.symmetric(vertical: 60),
                       child: Center(
                         child: Column(
                           children: [
-                            Icon(Icons.search_off, size: 64, color: Colors.grey),
-                            SizedBox(height: 16),
-                            Text('К сожалению, на эти даты\nсвободных номеров нет', textAlign: TextAlign.center),
+                            const Icon(Icons.search_off, size: 64, color: Colors.grey),
+                            const SizedBox(height: 16),
+                            Text(l10n.homeNoRooms, textAlign: TextAlign.center),
                           ],
                         ),
                       ),
@@ -220,14 +222,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ),
                   loading: () => const SliverFillRemaining(child: Center(child: CircularProgressIndicator())),
-                  error: (err, _) => SliverToBoxAdapter(child: Center(child: Text('Ошибка отзывов: $err'))),
+                  error: (err, _) => SliverToBoxAdapter(child: Center(child: Text(l10n.errorGeneric(err.toString())))),
                 );
               },
               loading: () => const SliverFillRemaining(child: Center(child: CircularProgressIndicator())),
-              error: (err, _) => SliverToBoxAdapter(child: Center(child: Text('Ошибка: $err'))),
+              error: (err, _) => SliverToBoxAdapter(child: Center(child: Text(l10n.errorGeneric(err.toString())))),
             ),
             loading: () => const SliverFillRemaining(child: Center(child: CircularProgressIndicator())),
-            error: (err, _) => SliverToBoxAdapter(child: Center(child: Text('Ошибка: $err'))),
+            error: (err, _) => SliverToBoxAdapter(child: Center(child: Text(l10n.errorGeneric(err.toString())))),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 32)),
         ],
@@ -244,9 +246,10 @@ class _RoomCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     // Расчет среднего рейтинга
-    String ratingText = 'Новый';
+    String ratingText = l10n.homeNew;
     if (reviews.isNotEmpty) {
       final avg = reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
       ratingText = avg.toStringAsFixed(1);

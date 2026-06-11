@@ -9,7 +9,7 @@ import 'package:hotel_app/features/services/services_provider.dart';
 import 'package:hotel_app/features/tasks/task_model.dart';
 import 'package:hotel_app/features/tasks/tasks_repository.dart';
 import 'package:intl/intl.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class ActiveStayScreen extends ConsumerWidget {
   const ActiveStayScreen({super.key});
 
@@ -20,11 +20,12 @@ class ActiveStayScreen extends ConsumerWidget {
     String roomId,
     String roomName,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     try {
       final newTask = Task(
         id: '', // Firestore сгенерирует ID
-        title: 'Заказ: ${service.name}',
-        description: 'Заказано из номера №$roomName',
+        title: l10n.activeStayOrderTitle(service.name),
+        description: l10n.activeStayOrderDesc(roomName),
         roomId: roomId,
         status: TaskStatus.pending,
         createdAt: DateTime.now(),
@@ -37,20 +38,18 @@ class ActiveStayScreen extends ConsumerWidget {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.green),
-                SizedBox(width: 12),
-                Text('Заказ принят!'),
+                const Icon(Icons.check_circle, color: Colors.green),
+                const SizedBox(width: 12),
+                Text(l10n.activeStayOrderAccepted),
               ],
             ),
-            content: Text(
-              'Мы принесем "${service.name}" в течение 15 минут прямо к вам в номер.',
-            ),
+            content: Text(l10n.activeStayOrderDelivery(service.name)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('ОТЛИЧНО'),
+                child: Text(l10n.activeStayOrderOk),
               ),
             ],
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -60,7 +59,7 @@ class ActiveStayScreen extends ConsumerWidget {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка при заказе: $e')),
+          SnackBar(content: Text(l10n.activeStayOrderError(e.toString()))),
         );
       }
     }
@@ -68,23 +67,25 @@ class ActiveStayScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
     final currentUser = ref.watch(authStateChangesProvider).value;
     final bookingsAsync = ref.watch(bookingsStreamProvider);
     final roomsAsync = ref.watch(roomsStreamProvider);
     final servicesAsync = ref.watch(servicesStreamProvider);
     final theme = Theme.of(context);
-    final dateFormat = DateFormat('dd.MM.yyyy');
+    final dateFormat = DateFormat.yMd(locale);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Мой номер'),
+        title: Text(l10n.activeStayTitle),
         centerTitle: true,
       ),
       body: bookingsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Ошибка загрузки: $err')),
+        error: (err, _) => Center(child: Text(l10n.errorLoadingData(err.toString()))),
         data: (bookings) {
-          if (currentUser == null) return const Center(child: Text('Войдите в систему'));
+          if (currentUser == null) return Center(child: Text(l10n.activeStayLoginRequired));
 
           final activeBooking = bookings.where((b) =>
             b.userId == currentUser.uid && b.status == BookingStatus.checkedIn
@@ -98,14 +99,14 @@ class ActiveStayScreen extends ConsumerWidget {
                   Icon(Icons.hotel_class_outlined, size: 80, color: theme.colorScheme.outline.withOpacity(0.5)),
                   const SizedBox(height: 16),
                   Text(
-                    'У вас нет активного проживания',
+                    l10n.activeStayNoActive,
                     style: theme.textTheme.titleMedium?.copyWith(color: theme.colorScheme.outline),
                   ),
                   const SizedBox(height: 8),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 32),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
                     child: Text(
-                      'Заселитесь в отель, чтобы управлять номером и заказывать услуги.',
+                      l10n.activeStayNoActiveDesc,
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -116,11 +117,11 @@ class ActiveStayScreen extends ConsumerWidget {
 
           return roomsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => const Center(child: Text('Ошибка комнат')),
+            error: (err, _) => Center(child: Text(l10n.activeStayErrorRooms)),
             data: (rooms) {
               final room = rooms.firstWhere(
                 (r) => r.id == activeBooking.roomId,
-                orElse: () => throw Exception('Комната не найдена'),
+                orElse: () => throw Exception(l10n.activeStayRoomNotFound),
               );
 
               return CustomScrollView(
@@ -151,7 +152,7 @@ class ActiveStayScreen extends ConsumerWidget {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Text('Номер ${room.name}', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                                        Text(l10n.activeStayRoomLabel(room.name), style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
                                         Text(room.typeId, style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
                                       ],
                                     ),
@@ -159,7 +160,7 @@ class ActiveStayScreen extends ConsumerWidget {
                                 ],
                               ),
                               const Divider(height: 32),
-                              _buildInfoRow(context, Icons.calendar_today, 'Выезд:', dateFormat.format(activeBooking.checkOut)),
+                              _buildInfoRow(context, Icons.calendar_today, l10n.activeStayCheckout, dateFormat.format(activeBooking.checkOut)),
                               const SizedBox(height: 12),
                               _buildInfoRow(context, Icons.wifi, 'Wi-Fi Password:', 'manas_guest_2026'),
                             ],
@@ -168,20 +169,20 @@ class ActiveStayScreen extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  const SliverToBoxAdapter(
+                  SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                      child: Text('Услуги в номер', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Text(l10n.activeStayRoomServices, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   servicesAsync.when(
                     loading: () => const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator())),
-                    error: (err, _) => SliverToBoxAdapter(child: Center(child: Text('Ошибка услуг: $err'))),
+                    error: (err, _) => SliverToBoxAdapter(child: Center(child: Text(l10n.servicesErrorLoading(err.toString())))),
                     data: (services) {
                       final availableServices = services.where((s) => !s.isArchived).toList();
 
                       if (availableServices.isEmpty) {
-                        return const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(16), child: Text('Нет доступных услуг.')));
+                        return SliverToBoxAdapter(child: Padding(padding: const EdgeInsets.all(16), child: Text(l10n.activeStayNoServices)));
                       }
 
                       return SliverPadding(

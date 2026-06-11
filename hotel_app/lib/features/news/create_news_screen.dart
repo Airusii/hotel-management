@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'news_model.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class CreateNewsScreen extends StatefulWidget {
   const CreateNewsScreen({super.key});
 
@@ -18,7 +18,7 @@ class _ContentBlockEdit {
   final String type;
   TextEditingController? textController;
   XFile? imageFile;
-  Uint8List? previewBytes; // 🚀 Для безопасного отображения превью
+  Uint8List? previewBytes;
 
   _ContentBlockEdit.text({String text = ''})
       : type = 'text',
@@ -48,6 +48,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
   }
 
   Future<void> _pickImage() async {
+    final l10n = AppLocalizations.of(context)!;
     final XFile? image = await _picker.pickImage(
       source: ImageSource.gallery,
       imageQuality: 85,
@@ -57,7 +58,6 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
 
     final Uint8List bytes = await image.readAsBytes();
 
-    // Ограничение для ПК (и веба/десктопа) в 250 кБ
     if (!kIsWeb &&
         (defaultTargetPlatform == TargetPlatform.windows ||
             defaultTargetPlatform == TargetPlatform.macOS ||
@@ -65,7 +65,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
       if (bytes.length > 250 * 1024) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Размер картинки для ПК не должен превышать 250 кБ')),
+            SnackBar(content: Text(l10n.newsCreateImageSizeError)),
           );
         }
         return;
@@ -73,7 +73,6 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
     }
 
     setState(() {
-      // Добавляем блок изображения с байтами для превью
       _blocks.add(_ContentBlockEdit.image(image, bytes));
       _blocks.add(_ContentBlockEdit.text());
     });
@@ -86,21 +85,16 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
         .child('${DateTime.now().millisecondsSinceEpoch}_${image.name}');
 
     final bytes = await image.readAsBytes();
-
-    // 1. Создаем задачу загрузки
     final uploadTask = ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
-
-    // 2. ЖЕСТКО дожидаемся окончания загрузки файла в хранилище
     final snapshot = await uploadTask;
-
-    // 3. Берем ссылку именно у успешно загруженного объекта
     return await snapshot.ref.getDownloadURL();
   }
 
   Future<void> _publishNews() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Введите заголовок!')),
+        SnackBar(content: Text(l10n.newsCreateEnterHeadline)),
       );
       return;
     }
@@ -123,7 +117,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
       }
 
       if (finalBlocks.isEmpty) {
-        throw 'Добавьте хотя бы немного текста или картинку';
+        throw l10n.newsCreateNoContent;
       }
 
       await FirebaseFirestore.instance.collection('news').add({
@@ -136,13 +130,13 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Новость успешно опубликована! 🎉')),
+        SnackBar(content: Text(l10n.newsCreateSuccess)),
       );
       context.pop();
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: $e')),
+        SnackBar(content: Text(l10n.newsCreateError(e.toString()))),
       );
       setState(() => _isLoading = false);
     }
@@ -150,14 +144,16 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Создать новость'),
+        title: Text(l10n.newsCreateTitle),
         actions: [
           IconButton(
             icon: const Icon(Icons.attach_file),
             onPressed: _pickImage,
-            tooltip: 'Добавить картинку',
+            tooltip: l10n.newsCreateAddImage,
           ),
         ],
       ),
@@ -168,20 +164,20 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
           children: [
             TextField(
               controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: 'Заголовок',
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: l10n.newsCreateHeadline,
+                border: const OutlineInputBorder(),
               ),
               maxLength: 60,
             ),
             const SizedBox(height: 16),
-            const Text('Кто увидит новость:', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.newsCreateAudience, style: const TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             SegmentedButton<TargetAudience>(
-              segments: const [
-                ButtonSegment(value: TargetAudience.all, label: Text('Всем')),
-                ButtonSegment(value: TargetAudience.guests, label: Text('Гостям')),
-                ButtonSegment(value: TargetAudience.staff, label: Text('Персоналу')),
+              segments: [
+                ButtonSegment(value: TargetAudience.all, label: Text(l10n.newsCreateAudienceAll)),
+                ButtonSegment(value: TargetAudience.guests, label: Text(l10n.newsCreateAudienceGuests)),
+                ButtonSegment(value: TargetAudience.staff, label: Text(l10n.newsCreateAudienceStaff)),
               ],
               selected: {_selectedAudience},
               onSelectionChanged: (Set<TargetAudience> newSelection) {
@@ -203,7 +199,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
                     child: TextField(
                       controller: block.textController,
                       decoration: InputDecoration(
-                        labelText: 'Текст секции ${index + 1}',
+                        labelText: l10n.newsCreateSectionHint(index + 1),
                         border: const OutlineInputBorder(),
                         alignLabelWithHint: true,
                         suffixIcon: index > 0
@@ -252,7 +248,7 @@ class _CreateNewsScreenState extends State<CreateNewsScreen> {
               ),
               child: _isLoading
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Text('Опубликовать', style: TextStyle(fontSize: 16)),
+                  : Text(l10n.newsCreatePublish, style: const TextStyle(fontSize: 16)),
             ),
           ],
         ),

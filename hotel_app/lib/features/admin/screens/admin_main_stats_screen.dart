@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotel_app/features/bookings/booking_model.dart';
 import 'package:hotel_app/features/bookings/bookings_repository.dart';
 import 'package:intl/intl.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class AdminMainStatsScreen extends ConsumerWidget {
   const AdminMainStatsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
     final bookingsAsync = ref.watch(bookingsStreamProvider);
     final theme = Theme.of(context);
     final now = DateTime.now();
@@ -17,21 +19,19 @@ class AdminMainStatsScreen extends ConsumerWidget {
       body: SafeArea(
         child: bookingsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('Ошибка загрузки данных: $err')),
+          error: (err, _) => Center(child: Text(l10n.errorLoadingData(err.toString()))),
           data: (bookings) {
-            // --- ЛОГИКА ВЫЧИСЛЕНИЙ ---
-            
-            // 1. Новые заявки (pending)
+            // 1. Новые заявки
             final pendingCount = bookings.where((b) => b.status == BookingStatus.pending).length;
 
-            // 2. Выручка за текущий месяц (confirmed или completed)
+            // 2. Выручка за текущий месяц
             final monthlyRevenue = bookings.where((b) {
               final isValidStatus = b.status == BookingStatus.confirmed || b.status == BookingStatus.completed;
               final isCurrentMonth = b.checkIn.month == now.month && b.checkIn.year == now.year;
               return isValidStatus && isCurrentMonth;
             }).fold<double>(0, (sum, b) => sum + b.totalPrice);
 
-            // 3. Предстоящие заезды (следующие 7 дней)
+            // 3. Предстоящие заезды (7 дней)
             final nextWeek = now.add(const Duration(days: 7));
             final upcomingCheckIns = bookings.where((b) {
               return b.status == BookingStatus.confirmed &&
@@ -42,7 +42,6 @@ class AdminMainStatsScreen extends ConsumerWidget {
             // 4. Всего броней
             final totalBookings = bookings.length;
 
-            // --- ВЕРСТКА ---
             return RefreshIndicator(
               onRefresh: () async => ref.refresh(bookingsStreamProvider),
               child: SingleChildScrollView(
@@ -51,12 +50,11 @@ class AdminMainStatsScreen extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Обзор отеля',
+                      l10n.adminOverview,
                       style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 24),
 
-                    // Сетка KPI карточек
                     GridView.count(
                       crossAxisCount: 2,
                       shrinkWrap: true,
@@ -66,25 +64,25 @@ class AdminMainStatsScreen extends ConsumerWidget {
                       childAspectRatio: 1.3,
                       children: [
                         _KpiCard(
-                          title: 'Новые заявки',
+                          title: l10n.adminStatsNewRequests,
                           value: pendingCount.toString(),
                           icon: Icons.notifications_active_outlined,
                           iconColor: Colors.orange,
                         ),
                         _KpiCard(
-                          title: 'Выручка (мес)',
+                          title: l10n.adminStatsMonthlyRevenue,
                           value: '\$${monthlyRevenue.toStringAsFixed(0)}',
                           icon: Icons.payments_outlined,
                           iconColor: Colors.green,
                         ),
                         _KpiCard(
-                          title: 'Заезды (нед)',
+                          title: l10n.adminStatsUpcomingCheckIns,
                           value: upcomingCheckIns.toString(),
                           icon: Icons.calendar_month_outlined,
                           iconColor: Colors.blue,
                         ),
                         _KpiCard(
-                          title: 'Всего броней',
+                          title: l10n.adminStatsTotalBookings,
                           value: totalBookings.toString(),
                           icon: Icons.folder_open_outlined,
                           iconColor: Colors.grey,
@@ -93,13 +91,13 @@ class AdminMainStatsScreen extends ConsumerWidget {
                     ),
 
                     const SizedBox(height: 32),
+                    // Используем общий заголовок, если нет спец. ключа
                     Text(
-                      'Последняя активность',
+                      l10n.adminBookingHistory, 
                       style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 16),
 
-                    // Простой горизонтальный список последних броней
                     SizedBox(
                       height: 120,
                       child: ListView.separated(
@@ -128,7 +126,7 @@ class AdminMainStatsScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  DateFormat('dd MMM').format(b.checkIn),
+                                  DateFormat.MMMd(locale).format(b.checkIn),
                                   style: theme.textTheme.bodySmall,
                                 ),
                                 const SizedBox(height: 8),

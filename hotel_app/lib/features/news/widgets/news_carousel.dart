@@ -2,12 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:hotel_app/features/news/news_model.dart';
 import 'package:hotel_app/features/news/widgets/news_details_dialog.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class NewsCarousel extends StatelessWidget {
   const NewsCarousel({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('news')
@@ -18,7 +20,7 @@ class NewsCarousel extends StatelessWidget {
           .snapshots(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Center(child: Text('Ошибка загрузки новостей'));
+          return Center(child: Text(l10n.newsErrorLoading));
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -32,11 +34,11 @@ class NewsCarousel extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Text(
-                'Свежие новости',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                l10n.newsTitle,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 12),
@@ -63,7 +65,6 @@ class NewsCarousel extends StatelessWidget {
   Widget _buildNewsCard(BuildContext context, NewsModel news) {
     final theme = Theme.of(context);
     
-    // Ищем первую картинку в блоках для иконки
     String? imageUrl;
     String firstText = '';
     
@@ -95,7 +96,6 @@ class NewsCarousel extends StatelessWidget {
             padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
-                // Левая часть - Картинка
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
@@ -108,7 +108,6 @@ class NewsCarousel extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                // Правая часть - Текст
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

@@ -4,25 +4,24 @@ import 'package:hotel_app/features/faq/faq_model.dart';
 import 'package:hotel_app/features/faq/faq_repository.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class AdminFaqScreen extends ConsumerWidget {
   const AdminFaqScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final faqAsync = ref.watch(adminFaqProvider);
-    final theme = Theme.of(context);
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Управление FAQ'),
-          bottom: const TabBar(
+          title: Text(l10n.adminFaqTitle),
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'Все вопросы'),
-              Tab(text: 'Без ответа'),
+              Tab(text: l10n.adminFaqAllQuestions),
+              Tab(text: l10n.adminFaqUnanswered),
             ],
           ),
         ),
@@ -34,7 +33,7 @@ class AdminFaqScreen extends ConsumerWidget {
             ],
           ),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Center(child: Text('Ошибка: $err')),
+          error: (err, _) => Center(child: Text(l10n.adminFaqErrorLoading(err.toString()))),
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () => _showAddFaqDialog(context, ref),
@@ -45,6 +44,7 @@ class AdminFaqScreen extends ConsumerWidget {
   }
 
   void _showAddFaqDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final questionController = TextEditingController();
     final answerController = TextEditingController();
     bool isPublic = true;
@@ -53,14 +53,14 @@ class AdminFaqScreen extends ConsumerWidget {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Создать FAQ'),
+          title: Text(l10n.adminFaqCreateTitle),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
                 TextField(
                   controller: questionController,
-                  decoration: const InputDecoration(labelText: 'Вопрос'),
+                  decoration: InputDecoration(labelText: l10n.faqTitle),
                   maxLines: 2,
                 ),
                 const SizedBox(height: 16),
@@ -78,7 +78,7 @@ class AdminFaqScreen extends ConsumerWidget {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Отмена')),
+            TextButton(onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
             FilledButton(
               onPressed: () async {
                 if (questionController.text.isNotEmpty) {
@@ -93,7 +93,7 @@ class AdminFaqScreen extends ConsumerWidget {
                   if (context.mounted) Navigator.pop(context);
                 }
               },
-              child: const Text('Создать'),
+              child: Text(l10n.save),
             ),
           ],
         ),
@@ -108,7 +108,9 @@ class _FaqList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (faqs.isEmpty) return const Center(child: Text('Список пуст'));
+    final l10n = AppLocalizations.of(context)!;
+    final locale = Localizations.localeOf(context).toString();
+    if (faqs.isEmpty) return Center(child: Text(l10n.faqEmpty));
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -120,7 +122,7 @@ class _FaqList extends ConsumerWidget {
           child: ExpansionTile(
             title: Text(faq.question, style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text(
-              'От: ${faq.userName ?? "Админ"} • ${DateFormat('dd.MM.yyyy').format(faq.createdAt)}',
+              '${l10n.faqGuest}: ${faq.userName ?? "Admin"} • ${DateFormat.yMd(locale).format(faq.createdAt)}',
               style: const TextStyle(fontSize: 12),
             ),
             trailing: faq.answer == null 
@@ -163,6 +165,7 @@ class _FaqList extends ConsumerWidget {
   }
 
   void _showAnswerDialog(BuildContext context, WidgetRef ref, FaqModel faq) {
+    final l10n = AppLocalizations.of(context)!;
     final answerController = TextEditingController(text: faq.answer);
     bool isPublic = faq.isPublic;
 
@@ -178,11 +181,11 @@ class _FaqList extends ConsumerWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Вопрос: ${faq.question}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text('${l10n.faqTitle}: ${faq.question}', style: const TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               TextField(
                 controller: answerController,
-                decoration: const InputDecoration(hintText: 'Ваш ответ...', border: OutlineInputBorder()),
+                decoration: InputDecoration(hintText: l10n.faqAskHint, border: const OutlineInputBorder()),
                 maxLines: 4,
               ),
               CheckboxListTile(
@@ -201,7 +204,7 @@ class _FaqList extends ConsumerWidget {
                     );
                     if (context.mounted) Navigator.pop(context);
                   },
-                  child: const Text('Сохранить ответ'),
+                  child: Text(l10n.save),
                 ),
               ),
               const SizedBox(height: 24),
@@ -212,4 +215,3 @@ class _FaqList extends ConsumerWidget {
     );
   }
 }
-

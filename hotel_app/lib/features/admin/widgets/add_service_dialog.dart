@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotel_app/features/services/service_model.dart';
 import 'package:hotel_app/features/services/services_repository.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class AddServiceDialog extends ConsumerStatefulWidget {
   const AddServiceDialog({super.key});
 
@@ -30,8 +30,10 @@ class _AddServiceDialogState extends ConsumerState<AddServiceDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return AlertDialog(
-      title: const Text('Add Hotel Service'),
+      title: Text(l10n.adminServicesAddDialog),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -39,8 +41,8 @@ class _AddServiceDialogState extends ConsumerState<AddServiceDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               TextFormField(
-                decoration: const InputDecoration(labelText: 'Service Name'),
-                validator: (val) => val!.isEmpty ? 'Enter name' : null,
+                decoration: InputDecoration(labelText: l10n.tasksName),
+                validator: (val) => val!.isEmpty ? l10n.adminEmployeesEnterName : null,
                 onSaved: (val) => _name = val ?? '',
               ),
               const SizedBox(height: 16),
@@ -63,12 +65,13 @@ class _AddServiceDialogState extends ConsumerState<AddServiceDialog> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                decoration: const InputDecoration(labelText: 'Type (e.g. Wellness, Food)'),
+                decoration: InputDecoration(labelText: l10n.adminRoomsTypeLabel),
+                initialValue: _type,
                 onSaved: (val) => _type = val ?? '',
               ),
               const SizedBox(height: 16),
               TextFormField(
-                decoration: const InputDecoration(labelText: 'Base Price'),
+                decoration: InputDecoration(labelText: l10n.adminRoomsPriceLabel),
                 keyboardType: TextInputType.number,
                 onSaved: (val) => _price = double.tryParse(val ?? '0') ?? 0,
               ),
@@ -77,7 +80,10 @@ class _AddServiceDialogState extends ConsumerState<AddServiceDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.cancel),
+        ),
         ElevatedButton(
           onPressed: () async {
             if (_formKey.currentState!.validate()) {
@@ -92,7 +98,7 @@ class _AddServiceDialogState extends ConsumerState<AddServiceDialog> {
               if (mounted) Navigator.pop(context);
             }
           },
-          child: const Text('Add Service'),
+          child: Text(l10n.adminServicesSave),
         ),
       ],
     );

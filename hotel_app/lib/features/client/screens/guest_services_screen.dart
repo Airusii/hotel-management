@@ -2,30 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotel_app/features/services/service_model.dart';
 import 'package:hotel_app/features/services/services_provider.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class GuestServicesScreen extends ConsumerWidget {
   const GuestServicesScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final servicesAsync = ref.watch(servicesStreamProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Заказ услуг'),
+        title: Text(l10n.servicesTitle),
         centerTitle: true,
       ),
       body: servicesAsync.when(
         data: (allServices) {
-          // Шаг 2: Фильтрация и группировка
           final activeServices = allServices.where((s) => !s.isArchived).toList();
           
           if (activeServices.isEmpty) {
-            return const Center(child: Text('Доступных услуг пока нет'));
+            return Center(child: Text(l10n.servicesEmpty));
           }
 
-          // Группировка по типу
           final Map<String, List<HotelService>> groupedServices = {};
           for (var service in activeServices) {
             groupedServices.putIfAbsent(service.type, () => []).add(service);
@@ -62,7 +61,7 @@ class GuestServicesScreen extends ConsumerWidget {
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Ошибка загрузки услуг: $err')),
+        error: (err, stack) => Center(child: Text(l10n.servicesErrorLoading(err.toString()))),
       ),
     );
   }
@@ -86,19 +85,18 @@ class _ServiceCard extends StatelessWidget {
       case 'local_taxi':
         return Icons.local_taxi;
       default:
-      // Если иконка не найдена, отдаем стандартный колокольчик сервиса
         return Icons.room_service;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     return Card(
         margin: const EdgeInsets.only(bottom: 12),
         elevation: 0,
-        // Вот тут магия: side переехал ВНУТРЬ скобок shape
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: theme.colorScheme.outlineVariant),
@@ -119,13 +117,14 @@ class _ServiceCard extends StatelessWidget {
         ),
         trailing: FilledButton.tonal(
           onPressed: () => _showOrderConfirmation(context, service),
-          child: const Text('Заказать'),
+          child: Text(l10n.servicesOrder),
         ),
       ),
     );
   }
 
   void _showOrderConfirmation(BuildContext context, HotelService service) {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -140,12 +139,12 @@ class _ServiceCard extends StatelessWidget {
               const Icon(Icons.shopping_cart_outlined, size: 48, color: Colors.grey),
               const SizedBox(height: 16),
               Text(
-                'Подтверждение заказа',
+                l10n.servicesConfirmTitle,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               Text(
-                'Вы хотите заказать "${service.name}" за \$${service.basePrice.toStringAsFixed(2)} со счета вашего номера?',
+                l10n.servicesConfirmBody(service.name, service.basePrice.toStringAsFixed(2)),
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 16),
               ),
@@ -155,24 +154,22 @@ class _ServiceCard extends StatelessWidget {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Отмена'),
+                      child: Text(l10n.servicesCancel),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: FilledButton(
                       onPressed: () {
-                        // ignore: avoid_print
-                        print('Заказ услуги: ${service.id}');
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Услуга заказана! Сотрудник скоро свяжется с вами.'),
+                          SnackBar(
+                            content: Text(l10n.servicesOrdered),
                             backgroundColor: Colors.green,
                           ),
                         );
                       },
-                      child: const Text('Подтвердить'),
+                      child: Text(l10n.servicesConfirm),
                     ),
                   ),
                 ],

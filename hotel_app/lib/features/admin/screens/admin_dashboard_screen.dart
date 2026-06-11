@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hotel_app/features/admin/screens/admin_main_stats_screen.dart';
 import 'package:hotel_app/features/admin/widgets/add_booking_dialog.dart';
-
+import 'package:hotel_app/l10n/app_localizations.dart';
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({
     super.key,
@@ -40,23 +40,24 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isLargeScreen = MediaQuery.of(context).size.width >= 600;
     final selectedIndex = _calculateSelectedIndex(context);
     final theme = Theme.of(context);
 
     // Подпункты "Брони"
     final bookingSubItems = [
-      (title: 'Шахматка', icon: Icons.grid_view_rounded, path: '/admin/calendar', index: 1),
-      (title: 'Новые заявки', icon: Icons.notification_important_outlined, path: '/admin/requests', index: 2),
-      (title: 'Создать бронь', icon: Icons.add_circle_outline_rounded, path: null, index: -1),
-      (title: 'История броней', icon: Icons.history_rounded, path: '/admin/bookings_history', index: 3),
+      (title: l10n.adminCalendar, icon: Icons.grid_view_rounded, path: '/admin/calendar', index: 1),
+      (title: l10n.adminNewRequests, icon: Icons.notification_important_outlined, path: '/admin/requests', index: 2),
+      (title: l10n.adminCreateBooking, icon: Icons.add_circle_outline_rounded, path: null, index: -1),
+      (title: l10n.adminBookingHistory, icon: Icons.history_rounded, path: '/admin/bookings_history', index: 3),
     ];
 
     // Подпункты "Новости"
     final newsSubItems = [
-      (title: 'Сделать публикацию', icon: Icons.add_comment_outlined, path: '/admin/news/create', index: 7),
-      (title: 'Активные публикации', icon: Icons.campaign_outlined, path: '/admin/news/active', index: 8),
-      (title: 'Архив', icon: Icons.archive_outlined, path: '/admin/news/archive', index: 9),
+      (title: l10n.adminCreateNews, icon: Icons.add_comment_outlined, path: '/admin/news/create', index: 7),
+      (title: l10n.adminActiveNews, icon: Icons.campaign_outlined, path: '/admin/news/active', index: 8),
+      (title: l10n.adminArchiveNews, icon: Icons.archive_outlined, path: '/admin/news/archive', index: 9),
     ];
 
     final bool isBookingGroupSelected = selectedIndex >= 1 && selectedIndex <= 3;
@@ -64,22 +65,22 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Hotel Admin'),
+        title: Text(l10n.adminDashboardTitle),
       ),
       drawer: !isLargeScreen
           ? Drawer(
               child: ListView(
                 children: [
-                  _buildDrawerHeader(theme),
+                  _buildDrawerHeader(theme, l10n),
                   _buildDrawerItem(
                     icon: Icons.dashboard_outlined,
-                    title: 'Обзор',
+                    title: l10n.adminOverview,
                     isSelected: selectedIndex == 0,
                     onTap: () => context.go('/admin'),
                   ),
                   _buildExpansionTile(
                     theme: theme,
-                    title: 'Брони',
+                    title: l10n.adminBookings,
                     icon: Icons.book_online_outlined,
                     selectedIndex: selectedIndex,
                     subItems: bookingSubItems,
@@ -87,25 +88,25 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   ),
                   _buildDrawerItem(
                     icon: Icons.room_outlined,
-                    title: 'Номера',
+                    title: l10n.adminRooms,
                     isSelected: selectedIndex == 4,
                     onTap: () => context.go('/admin/rooms'),
                   ),
                   _buildDrawerItem(
                     icon: Icons.room_service_outlined,
-                    title: 'Услуги',
+                    title: l10n.adminServices,
                     isSelected: selectedIndex == 5,
                     onTap: () => context.go('/admin/services'),
                   ),
                   _buildDrawerItem(
                     icon: Icons.people_outline,
-                    title: 'Сотрудники',
+                    title: l10n.adminEmployees,
                     isSelected: selectedIndex == 6,
                     onTap: () => context.go('/admin/employees'),
                   ),
                   _buildExpansionTile(
                     theme: theme,
-                    title: 'Новости',
+                    title: l10n.adminNews,
                     icon: Icons.newspaper_outlined,
                     selectedIndex: selectedIndex,
                     subItems: newsSubItems,
@@ -113,7 +114,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   ),
                   _buildDrawerItem(
                     icon: Icons.help_outline,
-                    title: 'FAQ',
+                    title: l10n.adminFaq,
                     isSelected: selectedIndex == 10,
                     onTap: () => context.go('/admin/faq'),
                   ),
@@ -135,13 +136,13 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     _buildSidebarItem(
                       context,
                       icon: Icons.dashboard_outlined,
-                      title: 'Обзор',
+                      title: l10n.adminOverview,
                       isSelected: selectedIndex == 0,
                       onTap: () => context.go('/admin'),
                     ),
                     _buildExpansionTile(
                       theme: theme,
-                      title: 'Брони',
+                      title: l10n.adminBookings,
                       icon: Icons.book_online_outlined,
                       selectedIndex: selectedIndex,
                       subItems: bookingSubItems,
@@ -151,27 +152,27 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     _buildSidebarItem(
                       context,
                       icon: Icons.room_outlined,
-                      title: 'Номера',
+                      title: l10n.adminRooms,
                       isSelected: selectedIndex == 4,
                       onTap: () => context.go('/admin/rooms'),
                     ),
                     _buildSidebarItem(
                       context,
                       icon: Icons.room_service_outlined,
-                      title: 'Услуги',
+                      title: l10n.adminServices,
                       isSelected: selectedIndex == 5,
                       onTap: () => context.go('/admin/services'),
                     ),
                     _buildSidebarItem(
                       context,
                       icon: Icons.people_outline,
-                      title: 'Сотрудники',
+                      title: l10n.adminEmployees,
                       isSelected: selectedIndex == 6,
                       onTap: () => context.go('/admin/employees'),
                     ),
                     _buildExpansionTile(
                       theme: theme,
-                      title: 'Новости',
+                      title: l10n.adminNews,
                       icon: Icons.newspaper_outlined,
                       selectedIndex: selectedIndex,
                       subItems: newsSubItems,
@@ -181,7 +182,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     _buildSidebarItem(
                       context,
                       icon: Icons.help_outline,
-                      title: 'FAQ',
+                      title: l10n.adminFaq,
                       isSelected: selectedIndex == 10,
                       onTap: () => context.go('/admin/faq'),
                     ),
@@ -247,12 +248,12 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildDrawerHeader(ThemeData theme) {
+  Widget _buildDrawerHeader(ThemeData theme, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.only(top: 50, left: 16, bottom: 16),
       color: theme.colorScheme.primaryContainer.withOpacity(0.3),
       child: Text(
-        'Меню админа',
+        l10n.adminDashboardTitle,
         style: theme.textTheme.titleLarge?.copyWith(
           fontWeight: FontWeight.bold,
           color: theme.colorScheme.primary,
