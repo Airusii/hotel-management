@@ -6,7 +6,8 @@ class Room {
   final String typeId;
   final double price;
   final RoomStatus status;
-  final String? image;
+  final String? image; // Main image (icon/thumbnail)
+  final List<String> images; // Gallery images
   final List<String> services;
   final bool isArchived;
 
@@ -17,6 +18,7 @@ class Room {
     required this.price,
     required this.status,
     this.image,
+    this.images = const [],
     required this.services,
     this.isArchived = false,
   });
@@ -29,6 +31,7 @@ class Room {
       'price': price,
       'status': status.name,
       'image': image,
+      'images': images,
       'services': services,
       'isArchived': isArchived,
     };
@@ -45,6 +48,7 @@ class Room {
         orElse: () => RoomStatus.available,
       ),
       image: map['image'],
+      images: List<String>.from(map['images'] ?? []),
       services: List<String>.from(map['services'] ?? []),
       isArchived: map['isArchived'] ?? false,
     );
@@ -57,6 +61,7 @@ class Room {
     double? price,
     RoomStatus? status,
     String? image,
+    List<String>? images,
     List<String>? services,
     bool? isArchived,
   }) {
@@ -67,6 +72,7 @@ class Room {
       price: price ?? this.price,
       status: status ?? this.status,
       image: image ?? this.image,
+      images: images ?? this.images,
       services: services ?? this.services,
       isArchived: isArchived ?? this.isArchived,
     );

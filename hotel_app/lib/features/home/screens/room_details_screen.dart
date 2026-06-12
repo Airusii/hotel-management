@@ -10,6 +10,7 @@ import 'package:hotel_app/features/reviews/review_model.dart';
 import 'package:hotel_app/features/reviews/reviews_repository.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:hotel_app/l10n/app_localizations.dart';
 class RoomDetailsScreen extends ConsumerStatefulWidget {
   final String roomId;
@@ -23,9 +24,11 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final PageController _pageController = PageController();
   
   DateTimeRange? _selectedDates;
   bool _isSubmitting = false;
+  int _currentImageIndex = 0;
 
   @override
   void initState() {
@@ -53,6 +56,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -77,6 +81,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
   }
 
   Future<void> _selectDates(List<Booking> allBookings) async {
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final picked = await showDateRangePicker(
@@ -169,6 +174,16 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
     }
   }
 
+  void _showFullScreenImage(List<String> allImages, int initialIndex) {
+    showDialog(
+      context: context,
+      builder: (context) => _FullScreenImageViewer(
+        images: allImages,
+        initialIndex: initialIndex,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -181,17 +196,72 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
       body: roomsAsync.when(
         data: (rooms) {
           final room = rooms.firstWhere((r) => r.id == widget.roomId);
+          final List<String> allImages = [
+            if (room.image != null) room.image!,
+            ...room.images,
+          ];
+
           return CustomScrollView(
             slivers: [
               SliverAppBar(
-                expandedHeight: 300,
+                expandedHeight: 400,
                 pinned: true,
                 flexibleSpace: FlexibleSpaceBar(
-                  background: room.image != null
-                      ? Image.network(room.image!, fit: BoxFit.cover)
-                      : Container(
+                  background: allImages.isEmpty
+                      ? Container(
                           color: theme.colorScheme.surfaceVariant,
                           child: Icon(Icons.hotel, size: 100, color: theme.colorScheme.primary.withOpacity(0.5)),
+                        )
+                      : Stack(
+                          children: [
+                            PageView.builder(
+                              controller: _pageController,
+                              itemCount: allImages.length,
+                              onPageChanged: (index) {
+                                setState(() => _currentImageIndex = index);
+                              },
+                              itemBuilder: (context, index) {
+                                return GestureDetector(
+                                  onTap: () => _showFullScreenImage(allImages, index),
+                                  child: Image.network(
+                                    allImages[index],
+                                    fit: BoxFit.cover,
+                                    width: double.infinity,
+                                    height: double.infinity,
+                                  ),
+                                );
+                              },
+                            ),
+                            if (allImages.length > 1)
+                              Positioned(
+                                bottom: 16,
+                                left: 0,
+                                right: 0,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: allImages.asMap().entries.map((entry) {
+                                    return GestureDetector(
+                                      onTap: () => _pageController.animateToPage(
+                                        entry.key,
+                                        duration: const Duration(milliseconds: 300),
+                                        curve: Curves.easeInOut,
+                                      ),
+                                      child: Container(
+                                        width: 8.0,
+                                        height: 8.0,
+                                        margin: const EdgeInsets.symmetric(horizontal: 4.0),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: Colors.white.withOpacity(
+                                            _currentImageIndex == entry.key ? 0.9 : 0.4,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                          ],
                         ),
                 ),
               ),
@@ -236,7 +306,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 12),
-                      Wrap(
+                      const Wrap(
                         spacing: 16,
                         runSpacing: 12,
                         children: [
@@ -261,7 +331,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Text(
-                                  'Номерди брондоо',
+                                  'Бронирование',
                                   style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                                 ),
                                 const SizedBox(height: 20),
@@ -289,7 +359,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                                 TextFormField(
                                   controller: _nameController,
                                   decoration: InputDecoration(
-                                    labelText: 'Сиздин атыныз',
+                                    labelText: 'Имя гостя',
                                     border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
                                     prefixIcon: const Icon(Icons.person_outline),
                                   ),
@@ -342,7 +412,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                         ),
                       ),
                       const SizedBox(height: 32),
-
+                      _ReviewsSection(reviewsAsync: reviewsAsync),
                     ],
                   ),
                 ),
@@ -352,6 +422,96 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, _) => Center(child: Text(l10n.errorGeneric(err.toString()))),
+      ),
+    );
+  }
+}
+
+class _ReviewsSection extends StatelessWidget {
+  final AsyncValue<List<Review>> reviewsAsync;
+  const _ReviewsSection({required this.reviewsAsync});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.roomDetailsReviews,
+          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 16),
+        reviewsAsync.when(
+          data: (reviews) {
+            if (reviews.isEmpty) {
+              return Text(l10n.roomDetailsNoReviews);
+            }
+            final avgRating = reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.star, color: Colors.orange, size: 28),
+                    const SizedBox(width: 8),
+                    Text(
+                      avgRating.toStringAsFixed(1),
+                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 8),
+                    Text('(${reviews.length})', style: theme.textTheme.bodyMedium),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                ...reviews.take(5).map((review) => _ReviewItem(review: review)),
+              ],
+            );
+          },
+          loading: () => const CircularProgressIndicator(),
+          error: (err, _) => Text(l10n.errorGeneric(err.toString())),
+        ),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+}
+
+class _FullScreenImageViewer extends StatelessWidget {
+  final List<String> images;
+  final int initialIndex;
+
+  const _FullScreenImageViewer({required this.images, required this.initialIndex});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: PageView.builder(
+        itemCount: images.length,
+        controller: PageController(initialPage: initialIndex),
+        itemBuilder: (context, index) {
+          return Center(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.network(
+                images[index],
+                fit: BoxFit.contain,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
