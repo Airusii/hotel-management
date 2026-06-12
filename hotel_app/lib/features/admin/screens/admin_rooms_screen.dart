@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotel_app/features/admin/widgets/add_room_dialog.dart';
+import 'package:hotel_app/features/admin/widgets/edit_room_dialog.dart';
 import 'package:hotel_app/features/rooms/rooms_repository.dart';
 import 'package:hotel_app/features/services/services_provider.dart';
 import 'package:hotel_app/l10n/app_localizations.dart';
+
 class AdminRoomsScreen extends ConsumerWidget {
   const AdminRoomsScreen({super.key});
 
@@ -78,11 +80,28 @@ class AdminRoomsScreen extends ConsumerWidget {
                     ),
                   ],
                 ),
-                trailing: IconButton(
-                  icon: const Icon(Icons.archive_outlined),
-                  onPressed: () {
-                    ref.read(roomsRepositoryProvider).archiveRoom(room.id);
-                  },
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      tooltip: 'Редактировать',
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => EditRoomDialog(room: room),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.archive_outlined),
+                      tooltip: 'В архив',
+                      onPressed: () {
+                        final archivedRoom = room.copyWith(isArchived: true);
+                        ref.read(roomsRepositoryProvider).updateRoom(archivedRoom);
+                      },
+                    ),
+                  ],
                 ),
               ),
             );

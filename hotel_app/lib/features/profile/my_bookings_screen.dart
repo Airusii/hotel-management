@@ -7,6 +7,7 @@ import 'package:hotel_app/features/rooms/rooms_repository.dart';
 import 'package:hotel_app/features/rooms/room_model.dart';
 import 'package:intl/intl.dart';
 import 'package:hotel_app/l10n/app_localizations.dart';
+
 class MyBookingsScreen extends ConsumerWidget {
   const MyBookingsScreen({super.key});
 
@@ -101,7 +102,7 @@ class MyBookingsScreen extends ConsumerWidget {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                '${l10n.homeRoomType}: ${room.name}',
+                                l10n.myBookingsRoomLabel(room.name),
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -124,7 +125,7 @@ class MyBookingsScreen extends ConsumerWidget {
                           const SizedBox(height: 8),
 
                           Text(
-                            '${l10n.myBookingsGuestName}: ${booking.guestName}',
+                            l10n.myBookingsGuestName(booking.guestName),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                             ),
@@ -177,11 +178,11 @@ class MyBookingsScreen extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.myBookingsCheckoutDialogTitle),
-        content: Text('${l10n.myBookingsCheckoutDialogBody}? ($roomName)'),
+        content: Text(l10n.myBookingsCheckoutDialogBody(roomName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.errorGeneric('Cancel')),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () async {
@@ -193,7 +194,7 @@ class MyBookingsScreen extends ConsumerWidget {
               if (ctx.mounted) Navigator.pop(ctx);
             },
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(l10n.bookingActionConfirmed),
+            child: Text(l10n.myBookingsConfirmCheckout),
           ),
         ],
       ),

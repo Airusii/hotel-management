@@ -363,6 +363,24 @@ class AppLocalizationsRu extends AppLocalizations {
   String get activeStayCheckout => 'Выезд:';
 
   @override
+  String get activeStayCheckin => 'Check-in:';
+
+  @override
+  String get activeStayTotal => 'Total Amount:';
+
+  @override
+  String get activeStayWifi => 'Wi-Fi Password:';
+
+  @override
+  String get activeStaySelectStay => 'Select stay to view';
+
+  @override
+  String get activeStayStatusActive => 'Active';
+
+  @override
+  String get activeStayStatusUpcoming => 'Upcoming';
+
+  @override
   String activeStayOrderTitle(String name) {
     return 'Заказ: $name';
   }

@@ -56,12 +56,12 @@ class _ActiveStayScreenState extends ConsumerState<ActiveStayScreen> {
 
     try {
       await ref.read(bookingsRepositoryProvider).orderServiceForBooking(
-            bookingId: booking.id,
-            service: service,
-            roomId: booking.roomId,
-            taskTitle: l10n.activeStayOrderTitle(service.name),
-            taskDescription: l10n.activeStayOrderDesc(roomName),
-          );
+        bookingId: booking.id,
+        service: service,
+        roomId: booking.roomId,
+        taskTitle: l10n.activeStayOrderTitle(service.name),
+        taskDescription: l10n.activeStayOrderDesc(roomName),
+      );
 
       if (!context.mounted) return;
 
@@ -152,8 +152,9 @@ class _ActiveStayScreenState extends ConsumerState<ActiveStayScreen> {
                       padding: const EdgeInsets.all(16),
                       child: DropdownButtonFormField<String>(
                         value: selectedBooking.id,
+                        isExpanded: true,
                         decoration: InputDecoration(
-                          labelText: 'Баруу үчүн бөлмө',
+                          labelText: l10n.activeStaySelectStay,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           prefixIcon: const Icon(Icons.meeting_room_outlined),
                         ),
@@ -162,12 +163,13 @@ class _ActiveStayScreenState extends ConsumerState<ActiveStayScreen> {
                           final stayRoom = matchingRooms.isEmpty ? null : matchingRooms.first;
                           final roomName = stayRoom?.name ?? booking.roomId;
                           final statusLabel = booking.status == BookingStatus.checkedIn
-                              ? 'Активдүү'
-                              : 'Алдыдагы';
+                              ? l10n.activeStayStatusActive
+                              : l10n.activeStayStatusUpcoming;
                           return DropdownMenuItem(
                             value: booking.id,
                             child: Text(
                               '№ $roomName · $statusLabel · ${dateFormat.format(booking.checkIn)}',
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
                           );
@@ -201,7 +203,10 @@ class _ActiveStayScreenState extends ConsumerState<ActiveStayScreen> {
                       child: Center(child: Text(l10n.servicesErrorLoading(err.toString()))),
                     ),
                     data: (services) {
-                      final availableServices = services.where((service) => !service.isArchived).toList();
+                      final roomServiceIds = room.services;
+                      final availableServices = services.where((service) => 
+                        !service.isArchived && roomServiceIds.contains(service.id)
+                      ).toList();
 
                       if (availableServices.isEmpty) {
                         return SliverToBoxAdapter(
@@ -219,7 +224,7 @@ class _ActiveStayScreenState extends ConsumerState<ActiveStayScreen> {
                             maxCrossAxisExtent: 240,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            mainAxisExtent: 176,
+                            mainAxisExtent: 200,
                           ),
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
@@ -354,7 +359,7 @@ class _StayDetailsCard extends StatelessWidget {
                     ),
                   ),
                   Chip(
-                    label: Text(isActive ? 'Активдүү' : 'Алдыдагы'),
+                    label: Text(isActive ? l10n.activeStayStatusActive : l10n.activeStayStatusUpcoming),
                     side: BorderSide.none,
                   ),
                 ],
@@ -362,7 +367,7 @@ class _StayDetailsCard extends StatelessWidget {
               const Divider(height: 32),
               _InfoRow(
                 icon: Icons.login,
-                label: 'Кирүү:',
+                label: l10n.activeStayCheckin,
                 value: dateFormat.format(booking.checkIn),
               ),
               const SizedBox(height: 12),
@@ -374,14 +379,14 @@ class _StayDetailsCard extends StatelessWidget {
               const SizedBox(height: 12),
               _InfoRow(
                 icon: Icons.payments_outlined,
-                label: 'Жалпы сумма:',
+                label: l10n.activeStayTotal,
                 value: '\$${booking.totalPrice.toStringAsFixed(0)}',
               ),
               if (isActive) ...[
                 const SizedBox(height: 12),
-                const _InfoRow(
+                _InfoRow(
                   icon: Icons.wifi,
-                  label: 'Wi-Fi сырсөзү:',
+                  label: l10n.activeStayWifi,
                   value: 'manas_guest_2026',
                 ),
               ],
@@ -439,6 +444,7 @@ class _ServiceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     return Card(
@@ -480,7 +486,7 @@ class _ServiceCard extends StatelessWidget {
                 width: double.infinity,
                 child: FilledButton(
                   onPressed: isOrdering ? null : onTap,
-                  child: const Text('Заказ кылуу'),
+                  child: Text(l10n.servicesOrder),
                 ),
               ),
             ],

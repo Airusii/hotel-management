@@ -2,21 +2,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hotel_app/features/services/service_model.dart';
 import 'booking_model.dart';
-import 'package:hotel_app/features/tasks/task_model.dart'; // Оставляем твой импорт для задач
+import 'package:hotel_app/features/tasks/task_model.dart';
 
 final bookingsRepositoryProvider = Provider((ref) => BookingsRepository());
 
-// 🚀 Провайдер всех броней (оставляем твой старый)
+// Провайдер всех броней
 final bookingsStreamProvider = StreamProvider<List<Booking>>((ref) {
   return ref.read(bookingsRepositoryProvider).getBookings();
 });
 
-// 🚀 НОВЫЙ: Провайдер ТОЛЬКО новых заявок (pending) для Админа
+// Провайдер ТОЛЬКО новых заявок (pending) для Админа
 final pendingBookingsProvider = StreamProvider.autoDispose<List<Booking>>((ref) {
   return ref.read(bookingsRepositoryProvider).getPendingBookings();
 });
 
-// 🚀 НОВЫЙ: Провайдер броней конкретного гостя
+// Провайдер броней конкретного гостя
 final userBookingsProvider = StreamProvider.autoDispose.family<List<Booking>, String>((ref, userId) {
   return ref.read(bookingsRepositoryProvider).getUserBookings(userId);
 });
@@ -29,27 +29,43 @@ class BookingsRepository {
             (snapshot) => snapshot.docs.map((doc) => Booking.fromMap(doc.data(), doc.id)).toList());
   }
 
-  // Получить заявки в ожидании (pending)
-  // ВАЖНО: требует составного индекса в Firebase: status (Asc) + createdAt (Desc)
-  // Если индекс не создан, запрос вернёт ошибку с ссылкой на создание индекса в консоли.
+  /// Получить заявки в ожидании (pending)
+  /// 🚀 ИСПРАВЛЕНО: Убрана сортировка orderBy на уровне Firestore, чтобы не требовать индекс.
+  /// Сортировка выполняется в Dart.
   Stream<List<Booking>> getPendingBookings() {
     return _firestore
         .collection('bookings')
         .where('status', isEqualTo: BookingStatus.pending.name)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Booking.fromMap(doc.data(), doc.id)).toList());
+        .map((snapshot) {
+          final list = snapshot.docs.map((doc) => Booking.fromMap(doc.data(), doc.id)).toList();
+          // Сортировка в коде: сначала новые (Desc)
+          list.sort((a, b) {
+            final dateA = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final dateB = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            return dateB.compareTo(dateA);
+          });
+          return list;
+        });
   }
 
-  // 🚀 НОВЫЙ: Получить брони конкретного пользователя
+  /// Получить брони конкретного пользователя
+  /// 🚀 ИСПРАВЛЕНО: Убрана сортировка orderBy на уровне Firestore, чтобы не требовать индекс.
   Stream<List<Booking>> getUserBookings(String userId) {
     return _firestore
         .collection('bookings')
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) => Booking.fromMap(doc.data(), doc.id)).toList());
+        .map((snapshot) {
+          final list = snapshot.docs.map((doc) => Booking.fromMap(doc.data(), doc.id)).toList();
+          // Сортировка в коде: сначала новые (Desc)
+          list.sort((a, b) {
+            final dateA = a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            final dateB = b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
+            return dateB.compareTo(dateA);
+          });
+          return list;
+        });
   }
 
   Future<void> addBooking(Booking booking) async {
@@ -60,7 +76,6 @@ class BookingsRepository {
     await _firestore.collection('bookings').doc(booking.id).update(booking.toMap());
   }
 
-  // 🚀 НОВЫЙ: Быстрое изменение статуса брони
   Future<void> updateBookingStatus(String bookingId, BookingStatus newStatus) async {
     await _firestore.collection('bookings').doc(bookingId).update({'status': newStatus.name});
   }
@@ -99,7 +114,6 @@ class BookingsRepository {
     await _firestore.collection('bookings').doc(bookingId).delete();
   }
 
-  /// Метод выселения гостя с автоматическим созданием задачи на уборку (Твой идеальный код)
   Future<void> checkOutGuest({
     required String bookingId,
     required String roomId,

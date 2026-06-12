@@ -362,6 +362,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get activeStayCheckout => 'Check-out:';
 
   @override
+  String get activeStayCheckin => 'Check-in:';
+
+  @override
+  String get activeStayTotal => 'Total Amount:';
+
+  @override
+  String get activeStayWifi => 'Wi-Fi Password:';
+
+  @override
+  String get activeStaySelectStay => 'Select stay to view';
+
+  @override
+  String get activeStayStatusActive => 'Active';
+
+  @override
+  String get activeStayStatusUpcoming => 'Upcoming';
+
+  @override
   String activeStayOrderTitle(String name) {
     return 'Order: $name';
   }

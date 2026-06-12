@@ -748,6 +748,42 @@ abstract class AppLocalizations {
   /// **'Check-out:'**
   String get activeStayCheckout;
 
+  /// No description provided for @activeStayCheckin.
+  ///
+  /// In en, this message translates to:
+  /// **'Check-in:'**
+  String get activeStayCheckin;
+
+  /// No description provided for @activeStayTotal.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Amount:'**
+  String get activeStayTotal;
+
+  /// No description provided for @activeStayWifi.
+  ///
+  /// In en, this message translates to:
+  /// **'Wi-Fi Password:'**
+  String get activeStayWifi;
+
+  /// No description provided for @activeStaySelectStay.
+  ///
+  /// In en, this message translates to:
+  /// **'Select stay to view'**
+  String get activeStaySelectStay;
+
+  /// No description provided for @activeStayStatusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get activeStayStatusActive;
+
+  /// No description provided for @activeStayStatusUpcoming.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming'**
+  String get activeStayStatusUpcoming;
+
   /// No description provided for @activeStayOrderTitle.
   ///
   /// In en, this message translates to:
