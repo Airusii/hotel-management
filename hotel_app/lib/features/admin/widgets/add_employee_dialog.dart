@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hotel_app/l10n/app_localizations.dart';
 
 class AddEmployeeDialog extends ConsumerStatefulWidget {
   const AddEmployeeDialog({super.key});
@@ -30,6 +31,7 @@ class _AddEmployeeDialogState extends ConsumerState<AddEmployeeDialog> {
   }
 
   Future<void> _registerEmployee() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
@@ -45,7 +47,7 @@ class _AddEmployeeDialogState extends ConsumerState<AddEmployeeDialog> {
         options: Firebase.app().options,
       );
 
-      UserCredential userCred = await FirebaseAuth.instanceFor(app: secondaryApp)
+      final userCred = await FirebaseAuth.instanceFor(app: secondaryApp)
           .createUserWithEmailAndPassword(email: email, password: password);
 
       await FirebaseFirestore.instance.collection('users').doc(userCred.user!.uid).set({
@@ -58,18 +60,18 @@ class _AddEmployeeDialogState extends ConsumerState<AddEmployeeDialog> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Сотрудник успешно зарегистрирован')),
+          SnackBar(content: Text(l10n.adminEmployeesRegistered)),
         );
         Navigator.pop(context);
       }
     } on FirebaseAuthException catch (e) {
-      String message = 'Произошла ошибка';
+      String message = l10n.adminEmployeesRegisterError;
       if (e.code == 'email-already-in-use') {
-        message = 'Этот email уже используется';
+        message = l10n.adminEmployeesEmailInUse;
       } else if (e.code == 'weak-password') {
-        message = 'Пароль слишком простой';
+        message = l10n.adminEmployeesWeakPassword;
       } else if (e.code == 'invalid-email') {
-        message = 'Некорректный email';
+        message = l10n.adminEmployeesInvalidEmail;
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -79,7 +81,7 @@ class _AddEmployeeDialogState extends ConsumerState<AddEmployeeDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: $e'), backgroundColor: Colors.red),
+          SnackBar(content: Text(l10n.adminEmployeesError(e.toString())), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -92,8 +94,10 @@ class _AddEmployeeDialogState extends ConsumerState<AddEmployeeDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return AlertDialog(
-      title: const Text('Добавить сотрудника'),
+      title: Text(l10n.adminEmployeesAddDialog),
       content: SingleChildScrollView(
         child: Form(
           key: _formKey,
@@ -102,39 +106,40 @@ class _AddEmployeeDialogState extends ConsumerState<AddEmployeeDialog> {
             children: [
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Имя',
-                  prefixIcon: Icon(Icons.person_outline),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.adminEmployeesName,
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: const OutlineInputBorder(),
                 ),
-                validator: (val) => val!.isEmpty ? 'Введите имя' : null,
+                validator: (value) => value!.isEmpty ? l10n.adminEmployeesEnterName : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nicknameController,
-                decoration: const InputDecoration(
-                  labelText: 'Никнейм',
-                  prefixIcon: Icon(Icons.badge_outlined),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.adminEmployeesNickname,
+                  prefixIcon: const Icon(Icons.badge_outlined),
+                  border: const OutlineInputBorder(),
                 ),
-                validator: (val) => (val == null || val.isEmpty) ? 'Введите никнейм' : null,
+                validator: (value) =>
+                    (value == null || value.isEmpty) ? l10n.adminEmployeesEnterNickname : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.adminEmployeesEmail,
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: const OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.emailAddress,
-                validator: (val) => val!.isEmpty ? 'Введите email' : null,
+                validator: (value) => value!.isEmpty ? l10n.adminEmployeesEnterEmail : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _passwordController,
                 decoration: InputDecoration(
-                  labelText: 'Пароль',
+                  labelText: l10n.adminEmployeesPassword,
                   prefixIcon: const Icon(Icons.lock_outline),
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
@@ -143,7 +148,7 @@ class _AddEmployeeDialogState extends ConsumerState<AddEmployeeDialog> {
                   ),
                 ),
                 obscureText: _obscurePassword,
-                validator: (val) => (val?.length ?? 0) < 6 ? 'Минимум 6 символов' : null,
+                validator: (value) => (value?.length ?? 0) < 6 ? l10n.adminEmployeesMinPassword : null,
               ),
             ],
           ),
@@ -152,13 +157,17 @@ class _AddEmployeeDialogState extends ConsumerState<AddEmployeeDialog> {
       actions: [
         TextButton(
           onPressed: _isLoading ? null : () => Navigator.pop(context),
-          child: const Text('Отмена'),
+          child: Text(l10n.adminEmployeesCancel),
         ),
         FilledButton(
           onPressed: _isLoading ? null : _registerEmployee,
           child: _isLoading
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-            : const Text('Зарегистрировать'),
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : Text(l10n.adminEmployeesRegister),
         ),
       ],
     );

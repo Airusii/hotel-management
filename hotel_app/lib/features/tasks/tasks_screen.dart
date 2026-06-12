@@ -6,8 +6,8 @@ class TasksScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Задачи')),
-      body: const Center(child: Text('Список задач для персонала')),
+      appBar: AppBar(title: const Text('Тапшырмалар')),
+      body: const Center(child: Text('Кызматкерлер үчүн тапшырмалар тизмеси')),
     );
   }
 }

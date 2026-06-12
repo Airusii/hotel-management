@@ -96,9 +96,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
               child: FilledButton.icon(
-                onPressed: () => context.push('/home/services'),
+                onPressed: () => context.push('/profile/active_stay'),
                 icon: const Icon(Icons.room_service),
-                label: Text(l10n.servicesTitle),
+                label: Text(l10n.homeOrderServices),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

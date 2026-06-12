@@ -85,7 +85,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
       if (next.status == AuthStatus.error) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(next.errorMessage ?? l10n.errorGeneric('Auth Error')),
+            content: Text(next.errorMessage ?? l10n.errorAuth),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -185,7 +185,7 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
     final roleName = roleAsyncValue.when(
       data: (roleStr) => _roleLabelFromString(roleStr, l10n),
       loading: () => '...',
-      error: (_, __) => 'Error',
+      error: (_, __) => l10n.error,
     );
 
     return Scaffold(
@@ -221,6 +221,11 @@ class _UserProfileScreenState extends ConsumerState<UserProfileScreen> {
             icon: Icons.calendar_month_outlined,
             title: l10n.myBookingsTitle,
             onTap: () => context.go('/profile/my_bookings'),
+          ),
+          _ProfileTile(
+            icon: Icons.room_service_outlined,
+            title: l10n.activeStayTitle,
+            onTap: () => context.go('/profile/active_stay'),
           ),
           _ProfileTile(
             icon: Icons.help_outline,

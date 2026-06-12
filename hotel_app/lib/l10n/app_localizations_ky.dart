@@ -524,7 +524,7 @@ class AppLocalizationsKy extends AppLocalizations {
   String get adminStatsMonthlyRevenue => 'Айлык киреше';
 
   @override
-  String get adminStatsUpcomingCheckIns => 'Алдыдагы кириүүлөр';
+  String get adminStatsUpcomingCheckIns => 'Алдыдагы кирүүлөр';
 
   @override
   String get adminStatsTotalBookings => 'Жалпы броньдоолор';

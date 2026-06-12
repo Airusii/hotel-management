@@ -58,7 +58,7 @@ class MainScaffold extends ConsumerWidget {
 
     return userRoleAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, _) => Scaffold(body: Center(child: Text('Ошибка: $err'))),
+      error: (err, _) => Scaffold(body: Center(child: Text(l10n.errorGeneric(err.toString())))),
       data: (role) {
         final visibleItems = getVisibleItems(role);
         final visibleIndices = visibleItems.map((e) => e.branchIndex).toList();

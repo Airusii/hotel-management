@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hotel_app/features/news/news_model.dart';
+import 'package:hotel_app/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
 
 class NewsDetailsDialog extends StatelessWidget {
@@ -10,6 +11,7 @@ class NewsDetailsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final dateFormat = DateFormat('dd.MM.yyyy HH:mm');
 
     return Dialog(
@@ -20,9 +22,8 @@ class NewsDetailsDialog extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Шапка с кнопкой закрытия
             AppBar(
-              title: const Text('Новость'),
+              title: Text(l10n.newsDialogTitle),
               automaticallyImplyLeading: false,
               actions: [
                 IconButton(
@@ -56,24 +57,24 @@ class NewsDetailsDialog extends StatelessWidget {
                             style: theme.textTheme.bodyLarge?.copyWith(height: 1.5),
                           ),
                         );
-                      } else {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
-                            child: Image.network(
-                              block.value,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                height: 150,
-                                color: theme.colorScheme.surfaceVariant,
-                                child: const Icon(Icons.broken_image, size: 48),
-                              ),
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: Image.network(
+                            block.value,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              height: 150,
+                              color: theme.colorScheme.surfaceVariant,
+                              child: const Icon(Icons.broken_image, size: 48),
                             ),
                           ),
-                        );
-                      }
+                        ),
+                      );
                     }).toList(),
                   ],
                 ),

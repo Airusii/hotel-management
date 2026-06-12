@@ -1,10 +1,11 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hotel_app/features/auth/auth_provider.dart';
+import 'package:hotel_app/features/rooms/rooms_repository.dart';
 import 'package:hotel_app/features/tasks/task_model.dart';
 import 'package:hotel_app/features/tasks/tasks_repository.dart';
-import 'package:hotel_app/features/rooms/rooms_repository.dart';
-import 'package:hotel_app/features/auth/auth_provider.dart';
+import 'package:hotel_app/l10n/app_localizations.dart';
 
 class AdminTasksScreen extends ConsumerStatefulWidget {
   const AdminTasksScreen({super.key});
@@ -15,12 +16,13 @@ class AdminTasksScreen extends ConsumerStatefulWidget {
 
 class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
   void _showAddTaskDialog() {
+    final l10n = AppLocalizations.of(context)!;
     final titleController = TextEditingController();
     final descriptionController = TextEditingController();
     String? selectedRoomId;
     String? selectedAssigneeId;
 
-    showDialog(
+    showDialog<void>(
       context: context,
       builder: (context) => Consumer(
         builder: (context, ref, child) {
@@ -28,58 +30,62 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
           final employeesAsync = ref.watch(employeesStreamProvider);
 
           return AlertDialog(
-            title: const Text('Новая задача'),
+            title: Text(l10n.tasksNew),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: titleController,
-                    decoration: const InputDecoration(
-                      labelText: 'Название',
-                      hintText: 'Например: Уборка номера',
+                    decoration: InputDecoration(
+                      labelText: l10n.tasksName,
+                      hintText: l10n.tasksNameHint,
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Описание',
-                      hintText: 'Что именно нужно сделать?',
+                    decoration: InputDecoration(
+                      labelText: l10n.tasksDescription,
+                      hintText: l10n.tasksDescHint,
                     ),
                     maxLines: 3,
                   ),
                   const SizedBox(height: 16),
                   roomsAsync.when(
                     data: (rooms) => DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Привязать к номеру'),
+                      decoration: InputDecoration(labelText: l10n.tasksAttachRoom),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('Без привязки')),
-                        ...rooms.map((room) => DropdownMenuItem(
-                              value: room.id,
-                              child: Text('№ ${room.name}'),
-                            )),
+                        DropdownMenuItem(value: null, child: Text(l10n.tasksUnattached)),
+                        ...rooms.map(
+                          (room) => DropdownMenuItem(
+                            value: room.id,
+                            child: Text('№ ${room.name}'),
+                          ),
+                        ),
                       ],
-                      onChanged: (val) => selectedRoomId = val,
+                      onChanged: (value) => selectedRoomId = value,
                     ),
                     loading: () => const LinearProgressIndicator(),
-                    error: (_, __) => const Text('Ошибка загрузки номеров'),
+                    error: (_, __) => Text(l10n.tasksErrorRooms),
                   ),
                   const SizedBox(height: 16),
                   employeesAsync.when(
                     data: (employees) => DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(labelText: 'Назначить сотрудника'),
+                      decoration: InputDecoration(labelText: l10n.tasksAssignEmployee),
                       items: [
-                        const DropdownMenuItem(value: null, child: Text('Не назначено')),
-                        ...employees.map((emp) => DropdownMenuItem(
-                              value: emp['id'],
-                              child: Text(emp['name']),
-                            )),
+                        DropdownMenuItem(value: null, child: Text(l10n.tasksUnassigned)),
+                        ...employees.map(
+                          (employee) => DropdownMenuItem(
+                            value: employee['id'],
+                            child: Text(employee['name']),
+                          ),
+                        ),
                       ],
-                      onChanged: (val) => selectedAssigneeId = val,
+                      onChanged: (value) => selectedAssigneeId = value,
                     ),
                     loading: () => const LinearProgressIndicator(),
-                    error: (_, __) => const Text('Ошибка загрузки персонала'),
+                    error: (_, __) => Text(l10n.tasksErrorStaff),
                   ),
                 ],
               ),
@@ -87,14 +93,14 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Отмена'),
+                child: Text(l10n.tasksCancel),
               ),
               FilledButton(
                 onPressed: () async {
                   if (titleController.text.trim().isEmpty) return;
 
                   final newTask = Task(
-                    id: '', // Firebase сгенерирует свой ID
+                    id: '',
                     title: titleController.text.trim(),
                     description: descriptionController.text.trim(),
                     status: TaskStatus.pending,
@@ -106,7 +112,7 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
                   await ref.read(tasksRepositoryProvider).addTask(newTask);
                   if (mounted) Navigator.pop(context);
                 },
-                child: const Text('Создать'),
+                child: Text(l10n.tasksCreate),
               ),
             ],
           );
@@ -117,12 +123,11 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final tasksAsync = ref.watch(tasksStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Задачи'),
-      ),
+      appBar: AppBar(title: Text(l10n.tasksTitle)),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddTaskDialog,
         child: const Icon(Icons.add),
@@ -131,26 +136,38 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
         data: (tasks) {
           return LayoutBuilder(
             builder: (context, constraints) {
-              // Если экран достаточно широкий (ПК/Планшет), делаем колонки адаптивными
-              final bool isWide = constraints.maxWidth > 800;
-
+              final isWide = constraints.maxWidth > 800;
               final content = Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildColumn('Ожидают', tasks.where((t) => t.status == TaskStatus.pending).toList(), TaskStatus.pending, isWide),
-                  _buildColumn('В работе', tasks.where((t) => t.status == TaskStatus.inProgress).toList(), TaskStatus.inProgress, isWide),
-                  _buildColumn('Готово', tasks.where((t) => t.status == TaskStatus.completed).toList(), TaskStatus.completed, isWide),
+                  _buildColumn(
+                    l10n.tasksPending,
+                    tasks.where((task) => task.status == TaskStatus.pending).toList(),
+                    TaskStatus.pending,
+                    isWide,
+                  ),
+                  _buildColumn(
+                    l10n.tasksInProgress,
+                    tasks.where((task) => task.status == TaskStatus.inProgress).toList(),
+                    TaskStatus.inProgress,
+                    isWide,
+                  ),
+                  _buildColumn(
+                    l10n.tasksDone,
+                    tasks.where((task) => task.status == TaskStatus.completed).toList(),
+                    TaskStatus.completed,
+                    isWide,
+                  ),
                 ],
               );
 
               if (isWide) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
                   child: content,
                 );
               }
 
-              // Для мобильных разрешаем горизонтальный скролл
               return ScrollConfiguration(
                 behavior: ScrollConfiguration.of(context).copyWith(
                   dragDevices: {PointerDeviceKind.touch, PointerDeviceKind.mouse},
@@ -160,7 +177,7 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
                   child: SizedBox(
                     width: 900,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                       child: content,
                     ),
                   ),
@@ -169,36 +186,33 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
             },
           );
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
-        error: (error, stackTrace) => Center(
-          child: Text('Ошибка: $error'),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(child: Text(l10n.tasksError(error.toString()))),
       ),
     );
   }
 
   Widget _buildColumn(String title, List<Task> columnTasks, TaskStatus status, bool isWide) {
     final theme = Theme.of(context);
-
-    Widget columnContent = DragTarget<Task>(
+    final columnContent = DragTarget<Task>(
       onAccept: (task) {
         ref.read(tasksRepositoryProvider).updateTaskStatus(task.id, status);
       },
       builder: (context, candidateData, rejectedData) {
         final isHovered = candidateData.isNotEmpty;
         return Container(
-          margin: const EdgeInsets.all(4.0),
+          margin: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: isHovered ? theme.colorScheme.primaryContainer.withOpacity(0.3) : theme.colorScheme.surfaceVariant.withOpacity(0.2),
+            color: isHovered
+                ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+                : theme.colorScheme.surfaceVariant.withOpacity(0.2),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16),
                 child: Row(
                   children: [
                     Text(
@@ -214,7 +228,11 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
                       ),
                       child: Text(
                         '${columnTasks.length}',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                     ),
                   ],
@@ -241,27 +259,26 @@ class _AdminTasksScreenState extends ConsumerState<AdminTasksScreen> {
 
 class _TaskCard extends ConsumerWidget {
   final Task task;
+
   const _TaskCard({required this.task});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final roomsAsync = ref.watch(roomsStreamProvider);
-    
     String? roomName;
+
     if (task.roomId != null) {
       roomsAsync.whenData((rooms) {
         try {
-          roomName = rooms.firstWhere((r) => r.id == task.roomId).name;
+          roomName = rooms.firstWhere((room) => room.id == task.roomId).name;
         } catch (_) {}
       });
     }
 
     final cardContent = _buildCardContent(context, roomName);
-
-    // На ПК (Windows/Web/etc) используем обычный Draggable для мгновенного отклика мышкой.
-    // На мобильных - LongPressDraggable, чтобы не блокировать скролл списка.
-    final bool useLongPress = theme.platform == TargetPlatform.iOS || theme.platform == TargetPlatform.android;
+    final useLongPress = theme.platform == TargetPlatform.iOS ||
+        theme.platform == TargetPlatform.android;
 
     if (useLongPress) {
       return LongPressDraggable<Task>(
@@ -289,22 +306,16 @@ class _TaskCard extends ConsumerWidget {
       borderRadius: BorderRadius.circular(12),
       color: Colors.transparent,
       child: Container(
-        width: 280, // Фиксируем ширину превью
+        width: 280,
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: theme.colorScheme.primary),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              task.title,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ],
+        child: Text(
+          task.title,
+          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
       ),
     );
@@ -312,12 +323,13 @@ class _TaskCard extends ConsumerWidget {
 
   Widget _buildCardContent(BuildContext context, String? roomName) {
     final theme = Theme.of(context);
+
     return Card(
       elevation: 1,
       margin: const EdgeInsets.symmetric(vertical: 4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -351,7 +363,7 @@ class _TaskCard extends ConsumerWidget {
             ),
             if (task.description.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 4.0),
+                padding: const EdgeInsets.only(top: 4),
                 child: Text(
                   task.description,
                   maxLines: 2,

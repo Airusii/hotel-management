@@ -22,6 +22,7 @@ import 'package:hotel_app/features/admin/screens/admin_main_stats_screen.dart';
 import '../../features/tasks/screens/employee_tasks_screen.dart';
 import 'package:hotel_app/features/news/create_news_screen.dart';
 import 'package:hotel_app/features/client/screens/guest_services_screen.dart';
+import 'package:hotel_app/features/client/screens/active_stay_screen.dart';
 import 'package:hotel_app/features/admin/screens/admin_news_active_screen.dart';
 import 'package:hotel_app/features/admin/screens/admin_news_archive_screen.dart';
 import 'package:hotel_app/features/admin/screens/admin_faq_screen.dart';
@@ -111,6 +112,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) => const UserProfileScreen(),
                 routes: [
                   GoRoute(path: 'my_bookings', builder: (context, state) => const MyBookingsScreen()),
+                  GoRoute(path: 'active_stay', builder: (context, state) => const ActiveStayScreen()),
                   GoRoute(path: 'my_reviews', builder: (context, state) => const MyReviewsScreen()),
                   GoRoute(path: 'settings', builder: (context, state) => const ProfileSettingsScreen()),
                   GoRoute(path: 'faq', builder: (context, state) => const GuestFaqScreen()),

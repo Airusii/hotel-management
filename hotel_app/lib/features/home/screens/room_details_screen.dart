@@ -342,42 +342,7 @@ class _RoomDetailsScreenState extends ConsumerState<RoomDetailsScreen> {
                         ),
                       ),
                       const SizedBox(height: 32),
-                      
-                      Text(
-                        'меймандар ою',
-                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 16),
-                      reviewsAsync.when(
-                        data: (reviews) {
-                          if (reviews.isEmpty) {
-                            return Text(l10n.roomDetailsNoReviews);
-                          }
-                          final avgRating = reviews.map((r) => r.rating).reduce((a, b) => a + b) / reviews.length;
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.star, color: Colors.orange, size: 28),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    avgRating.toStringAsFixed(1),
-                                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Text('(${reviews.length})', style: theme.textTheme.bodyMedium),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              ...reviews.take(5).map((review) => _ReviewItem(review: review)),
-                            ],
-                          );
-                        },
-                        loading: () => const CircularProgressIndicator(),
-                        error: (err, _) => Text(l10n.errorGeneric(err.toString())),
-                      ),
-                      const SizedBox(height: 40),
+
                     ],
                   ),
                 ),

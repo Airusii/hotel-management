@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hotel_app/features/services/service_model.dart';
 import 'booking_model.dart';
 import 'package:hotel_app/features/tasks/task_model.dart'; // Оставляем твой импорт для задач
 
@@ -62,6 +63,36 @@ class BookingsRepository {
   // 🚀 НОВЫЙ: Быстрое изменение статуса брони
   Future<void> updateBookingStatus(String bookingId, BookingStatus newStatus) async {
     await _firestore.collection('bookings').doc(bookingId).update({'status': newStatus.name});
+  }
+
+  Future<void> orderServiceForBooking({
+    required String bookingId,
+    required HotelService service,
+    required String roomId,
+    required String taskTitle,
+    required String taskDescription,
+  }) async {
+    final bookingRef = _firestore.collection('bookings').doc(bookingId);
+    final taskRef = _firestore.collection('tasks').doc();
+
+    await _firestore.runTransaction((transaction) async {
+      transaction.update(bookingRef, {
+        'totalPrice': FieldValue.increment(service.basePrice),
+      });
+
+      transaction.set(taskRef, {
+        'title': taskTitle,
+        'description': taskDescription,
+        'roomId': roomId,
+        'assigneeId': null,
+        'status': TaskStatus.pending.name,
+        'createdAt': Timestamp.fromDate(DateTime.now()),
+        'bookingId': bookingId,
+        'serviceId': service.id,
+        'serviceName': service.name,
+        'servicePrice': service.basePrice,
+      });
+    });
   }
 
   Future<void> deleteBooking(String bookingId) async {

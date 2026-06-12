@@ -19,39 +19,37 @@ class AdminDashboardScreen extends StatelessWidget {
           );
         },
         icon: const Icon(Icons.add_alert),
-        label: const Text('Создать новость'),
+        label: const Text('Жаңылык түзүү'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Динамика доходов (Неделя)',
+              'Кирешенин динамикасы (жума)',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
               height: 250,
-              child: _buildRevenueChart(), // Вызов метода для графика доходов
+              child: _buildRevenueChart(),
             ),
             const SizedBox(height: 40),
             const Text(
-              'Статус номерного фонда',
+              'Бөлмөлөрдүн абалы',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             SizedBox(
               height: 200,
-              child: _buildRoomStatusChart(), // Вызов метода для круговой диаграммы
+              child: _buildRoomStatusChart(),
             ),
           ],
         ),
       ),
     );
   }
-
-  // --- Приватные методы для сборки UI ---
 
   Widget _buildRevenueChart() {
     return BarChart(
@@ -65,7 +63,7 @@ class AdminDashboardScreen extends StatelessWidget {
         ],
         titlesData: const FlTitlesData(
           leftTitles: AxisTitles(),
-          topTitles: AxisTitles(), // Скрываем лишние оси сверху и слева
+          topTitles: AxisTitles(),
         ),
         borderData: FlBorderData(show: false),
       ),
@@ -80,21 +78,21 @@ class AdminDashboardScreen extends StatelessWidget {
         sections: [
           PieChartSectionData(
             value: 60,
-            title: 'Заняты',
+            title: 'Бош эмес',
             color: Colors.indigo,
             radius: 40,
             titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           PieChartSectionData(
             value: 30,
-            title: 'Свободны',
+            title: 'Бош',
             color: Colors.teal,
             radius: 40,
             titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
           PieChartSectionData(
             value: 10,
-            title: 'Уборка',
+            title: 'Тазалоо',
             color: Colors.orange,
             radius: 40,
             titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
